@@ -23,7 +23,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat) => (
             <Card key={stat.title} className="border-border/50 hover:shadow-lg transition-all duration-300 group">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -37,7 +37,7 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </div> */}
       </div>
     </DashboardLayout>
   );

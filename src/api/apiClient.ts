@@ -27,7 +27,27 @@ export async function login(email: string, password: string) {
 }
 
 // Example: logout function
-export function logout() {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
+export async function logout() {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken');
+
+    // Call the backend logout API
+    if (refreshToken) {
+      await api.post('/auth/logout', { refresh_token: refreshToken });
+    }
+
+    // Clear local storage tokens
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+
+    return true;
+  } catch (error) {
+    console.error('Logout failed:', error);
+    // Still clear local storage even if API fails
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    return false;
+  }
 }

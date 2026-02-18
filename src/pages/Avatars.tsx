@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,21 @@ import { Plus, Bot, FileText, Target, Globe, Settings, Eye, Trash2, Search, User
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { fetchAvatars, fetchMetaData, fetchOrganizations, fetchAvatarConfigurations, addAvatar, editAvatar, deleteAvatar } from "../api/apiService";
+import { getOrganizationName } from "@/lib/lookupUtils";
+
+interface AvatarFormContentProps {
+  isEdit?: boolean;
+  formData: Partial<AvatarData>;
+  setFormData: React.Dispatch<React.SetStateAction<Partial<AvatarData>>>;
+  organizations: any[];
+  avatarOptions: any;
+  backgroundOptions: string[];
+  strictnessOptions: string[];
+  difficultyOptions: string[];
+  responseLengthOptions: string[];
+  toggleAvatarSelection: (avatarId: string) => void;
+}
 
 interface AvatarData {
   id: number;
@@ -42,215 +57,18 @@ interface AvatarOption {
   image: string;
 }
 
-const Avatars = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedOrg, setSelectedOrg] = useState("all");
-  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
-  const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
-  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedAvatar, setSelectedAvatar] = useState<AvatarData | null>(null);
-  const [formData, setFormData] = useState<Partial<AvatarData>>({
-    selectedAvatarIds: [],
-  });
-
-  // Avatar options for selection
-  const avatarOptions: AvatarOption[] = [
-    { id: "avatar_001", name: "Alex", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" },
-    { id: "avatar_002", name: "Sarah", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face" },
-    { id: "avatar_003", name: "Michael", image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" },
-    { id: "avatar_004", name: "Emily", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face" },
-    { id: "avatar_005", name: "David", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face" },
-    { id: "avatar_006", name: "Jessica", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face" },
-    { id: "avatar_007", name: "Robert", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face" },
-    { id: "avatar_008", name: "Amanda", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face" },
-  ];
-
-  const organizations = [
-    { id: "1", name: "TechCorp Inc." },
-    { id: "2", name: "Healthcare Plus" },
-    { id: "3", name: "Finance Solutions" },
-  ];
-
-  const [avatars, setAvatars] = useState<AvatarData[]>([
-    {
-      id: 1,
-      name: "Sales Consultant Pro",
-      description: "Expert sales avatar for B2B product demonstrations",
-      persona: "Experienced sales professional with 15 years in enterprise software",
-      role: "Sales Representative",
-      selectedAvatarIds: ["avatar_001", "avatar_003"],
-      background: "Modern Office",
-      personality: "Assertive, Persuasive, Goal-oriented",
-      strictness: "Medium",
-      knowledgeProfile: "Enterprise Software Sales",
-      allowedTopics: "Product features, Pricing, Implementation",
-      conversationDifficulty: "Intermediate",
-      responseLength: "Medium",
-      organization: "TechCorp Inc.",
-      scenarios: 12,
-      documents: 8,
-      uses: 245,
-      status: "Active",
-      color: "from-blue-500 to-cyan-500"
-    },
-    {
-      id: 2,
-      name: "Customer Support Specialist",
-      description: "Empathetic support avatar for handling customer queries",
-      persona: "Friendly customer service expert specializing in technical support",
-      role: "Support Agent",
-      selectedAvatarIds: ["avatar_002", "avatar_004"],
-      background: "Help Desk",
-      personality: "Empathetic, Patient, Problem-solver",
-      strictness: "Low",
-      knowledgeProfile: "Technical Support",
-      allowedTopics: "Troubleshooting, Account issues, Product guidance",
-      conversationDifficulty: "Beginner",
-      responseLength: "Detailed",
-      organization: "Healthcare Plus",
-      scenarios: 18,
-      documents: 15,
-      uses: 389,
-      status: "Active",
-      color: "from-green-500 to-emerald-500"
-    },
-    {
-      id: 3,
-      name: "Technical Expert",
-      description: "Deep technical knowledge avatar for complex discussions",
-      persona: "Senior engineer with expertise in cloud architecture",
-      role: "Technical Consultant",
-      selectedAvatarIds: ["avatar_005", "avatar_007"],
-      background: "Tech Lab",
-      personality: "Analytical, Detail-oriented, Professional",
-      strictness: "High",
-      knowledgeProfile: "Cloud Architecture",
-      allowedTopics: "Technical specifications, Architecture design, Best practices",
-      conversationDifficulty: "Advanced",
-      responseLength: "Comprehensive",
-      organization: "TechCorp Inc.",
-      scenarios: 10,
-      documents: 22,
-      uses: 167,
-      status: "Active",
-      color: "from-purple-500 to-violet-500"
-    },
-    {
-      id: 4,
-      name: "Negotiation Specialist",
-      description: "Strategic avatar for negotiation training scenarios",
-      persona: "Executive negotiator with Fortune 500 experience",
-      role: "Negotiator",
-      selectedAvatarIds: ["avatar_006", "avatar_008"],
-      background: "Boardroom",
-      personality: "Strategic, Diplomatic, Confident",
-      strictness: "High",
-      knowledgeProfile: "Corporate Negotiations",
-      allowedTopics: "Deal terms, Contract negotiation, Strategic partnerships",
-      conversationDifficulty: "Expert",
-      responseLength: "Concise",
-      organization: "Finance Solutions",
-      scenarios: 8,
-      documents: 12,
-      uses: 134,
-      status: "Draft",
-      color: "from-orange-500 to-amber-500"
-    },
-  ]);
-
-  const backgroundOptions = ["Modern Office", "Help Desk", "Tech Lab", "Boardroom", "Home Office", "Outdoor", "Abstract", "Plain"];
-  const strictnessOptions = ["Low", "Medium", "High", "Very High"];
-  const difficultyOptions = ["Beginner", "Intermediate", "Advanced", "Expert"];
-  const responseLengthOptions = ["Concise", "Medium", "Detailed", "Comprehensive"];
-
-  const toggleAvatarSelection = (avatarId: string) => {
-    const currentSelection = formData.selectedAvatarIds || [];
-    if (currentSelection.includes(avatarId)) {
-      setFormData({ 
-        ...formData, 
-        selectedAvatarIds: currentSelection.filter(id => id !== avatarId) 
-      });
-    } else {
-      setFormData({ 
-        ...formData, 
-        selectedAvatarIds: [...currentSelection, avatarId] 
-      });
-    }
-  };
-
-  const filteredAvatars = avatars.filter(avatar => {
-    const matchesSearch = avatar.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         avatar.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesOrg = selectedOrg === "all" || avatar.organization === organizations.find(o => o.id === selectedOrg)?.name;
-    return matchesSearch && matchesOrg;
-  });
-
-  const handleCreateAvatar = () => {
-    if (!formData.name || !formData.organization) {
-      toast.error("Please fill in required fields");
-      return;
-    }
-    const newAvatar: AvatarData = {
-      id: avatars.length + 1,
-      name: formData.name || "",
-      description: formData.description || "",
-      persona: formData.persona || "",
-      role: formData.role || "",
-      selectedAvatarIds: formData.selectedAvatarIds || [],
-      background: formData.background || "Modern Office",
-      personality: formData.personality || "",
-      strictness: formData.strictness || "Medium",
-      knowledgeProfile: formData.knowledgeProfile || "",
-      allowedTopics: formData.allowedTopics || "",
-      conversationDifficulty: formData.conversationDifficulty || "Intermediate",
-      responseLength: formData.responseLength || "Medium",
-      organization: formData.organization || "",
-      scenarios: 0,
-      documents: 0,
-      uses: 0,
-      status: "Draft",
-      color: "from-blue-500 to-cyan-500"
-    };
-    setAvatars([...avatars, newAvatar]);
-    setIsCreateSheetOpen(false);
-    setFormData({ selectedAvatarIds: [] });
-    toast.success("Avatar created successfully");
-  };
-
-  const handleEditAvatar = () => {
-    if (!selectedAvatar) return;
-    setAvatars(avatars.map(a => a.id === selectedAvatar.id ? { ...selectedAvatar, ...formData } as AvatarData : a));
-    setIsEditSheetOpen(false);
-    setFormData({ selectedAvatarIds: [] });
-    toast.success("Avatar updated successfully");
-  };
-
-  const handleDeleteAvatar = () => {
-    if (!selectedAvatar) return;
-    setAvatars(avatars.filter(a => a.id !== selectedAvatar.id));
-    setIsDeleteDialogOpen(false);
-    setSelectedAvatar(null);
-    toast.success("Avatar deleted successfully");
-  };
-
-  const openViewSheet = (avatar: AvatarData) => {
-    setSelectedAvatar(avatar);
-    setIsViewSheetOpen(true);
-  };
-
-  const openEditSheet = (avatar: AvatarData) => {
-    setSelectedAvatar(avatar);
-    setFormData(avatar);
-    setIsEditSheetOpen(true);
-  };
-
-  const openDeleteDialog = (avatar: AvatarData) => {
-    setSelectedAvatar(avatar);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const AvatarFormContent = ({ isEdit = false }: { isEdit?: boolean }) => (
+ const AvatarFormContent = ({
+  isEdit = false,
+  formData,
+  setFormData,
+  organizations,
+  avatarOptions,
+  backgroundOptions,
+  strictnessOptions,
+  difficultyOptions,
+  responseLengthOptions,
+  toggleAvatarSelection
+}: AvatarFormContentProps) => (
     <div className="space-y-6 py-4">
       {/* Organization Selection */}
       <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
@@ -264,10 +82,11 @@ const Avatars = () => {
           </SelectTrigger>
           <SelectContent>
             {organizations.map(org => (
-              <SelectItem key={org.id} value={org.name}>{org.name}</SelectItem>
+              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+
       </div>
 
       {/* A. Metadata Section */}
@@ -283,34 +102,34 @@ const Avatars = () => {
         <div className="p-4 space-y-4 bg-card/50">
           <div className="space-y-2">
             <Label>Avatar Name *</Label>
-            <Input 
-              placeholder="Enter avatar name" 
-              value={formData.name || ""} 
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+            <Input
+              placeholder="Enter avatar name"
+              value={formData.name || ""}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
           <div className="space-y-2">
             <Label>Avatar Description</Label>
-            <Textarea 
-              placeholder="Describe this avatar's purpose" 
-              value={formData.description || ""} 
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+            <Textarea
+              placeholder="Describe this avatar's purpose"
+              value={formData.description || ""}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
           <div className="space-y-2">
             <Label>Persona</Label>
-            <Textarea 
-              placeholder="Define the avatar's persona and background" 
-              value={formData.persona || ""} 
-              onChange={(e) => setFormData({ ...formData, persona: e.target.value })} 
+            <Textarea
+              placeholder="Define the avatar's persona and background"
+              value={formData.persona || ""}
+              onChange={(e) => setFormData({ ...formData, persona: e.target.value })}
             />
           </div>
           <div className="space-y-2">
             <Label>Role</Label>
-            <Input 
-              placeholder="e.g., Sales Representative, Support Agent" 
-              value={formData.role || ""} 
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })} 
+            <Input
+              placeholder="e.g., Sales Representative, Support Agent"
+              value={formData.role || ""}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             />
           </div>
         </div>
@@ -333,27 +152,26 @@ const Avatars = () => {
               {(formData.selectedAvatarIds || []).length} avatar(s) selected
             </p>
             <div className="grid grid-cols-4 gap-3">
-              {avatarOptions.map((avatar) => {
+              {avatarOptions?.map((avatar) => {
                 const isSelected = (formData.selectedAvatarIds || []).includes(avatar.id);
                 return (
                   <div
                     key={avatar.id}
                     onClick={() => toggleAvatarSelection(avatar.id)}
-                    className={`relative cursor-pointer rounded-lg border-2 p-2 transition-all duration-200 hover:shadow-md ${
-                      isSelected 
-                        ? "border-primary bg-primary/10 shadow-sm" 
+                    className={`relative cursor-pointer rounded-lg border-2 p-2 transition-all duration-200 hover:shadow-md ${isSelected
+                        ? "border-primary bg-primary/10 shadow-sm"
                         : "border-border/50 hover:border-primary/50"
-                    }`}
+                      }`}
                   >
                     <div className="aspect-square rounded-md overflow-hidden mb-2">
-                      <img 
-                        src={avatar.image} 
-                        alt={avatar.name}
+                      <img
+                        src={`http://13.51.242.38:4000/${avatar.photo}`}
+                        alt={avatar.avatar_name}
                         className="w-full h-full object-cover"
+                        crossorigin="anonymous"
                       />
                     </div>
-                    <p className="text-xs font-medium text-center truncate">{avatar.name}</p>
-                    <p className="text-[10px] text-muted-foreground text-center">{avatar.id}</p>
+                    <p className="text-xs font-medium text-center truncate">{avatar.avatar_name}</p>
                     {isSelected && (
                       <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                         <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -391,10 +209,10 @@ const Avatars = () => {
         <div className="p-4 space-y-4 bg-card/50">
           <div className="space-y-2">
             <Label>Personality</Label>
-            <Input 
-              placeholder="e.g., Assertive, Empathetic, Analytical" 
-              value={formData.personality || ""} 
-              onChange={(e) => setFormData({ ...formData, personality: e.target.value })} 
+            <Input
+              placeholder="e.g., Assertive, Empathetic, Analytical"
+              value={formData.personality || ""}
+              onChange={(e) => setFormData({ ...formData, personality: e.target.value })}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -419,18 +237,18 @@ const Avatars = () => {
           </div>
           <div className="space-y-2">
             <Label>Knowledge Profile</Label>
-            <Input 
-              placeholder="e.g., Enterprise Software Sales" 
-              value={formData.knowledgeProfile || ""} 
-              onChange={(e) => setFormData({ ...formData, knowledgeProfile: e.target.value })} 
+            <Input
+              placeholder="e.g., Enterprise Software Sales"
+              value={formData.knowledgeProfile || ""}
+              onChange={(e) => setFormData({ ...formData, knowledgeProfile: e.target.value })}
             />
           </div>
           <div className="space-y-2">
             <Label>Allowed Topics</Label>
-            <Textarea 
-              placeholder="Topics the avatar can discuss" 
-              value={formData.allowedTopics || ""} 
-              onChange={(e) => setFormData({ ...formData, allowedTopics: e.target.value })} 
+            <Textarea
+              placeholder="Topics the avatar can discuss"
+              value={formData.allowedTopics || ""}
+              onChange={(e) => setFormData({ ...formData, allowedTopics: e.target.value })}
             />
           </div>
           <div className="space-y-2">
@@ -447,12 +265,275 @@ const Avatars = () => {
     </div>
   );
 
+const Avatars = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOrg, setSelectedOrg] = useState("all");
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarData | null>(null);
+  const [avatarOptions, setaAvatarOptions] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [metaData, setMetaData] = useState<any>({
+    constants: {},
+    schema: { enums: {} }
+  });
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [formData, setFormData] = useState<Partial<AvatarData>>({
+    selectedAvatarIds: [],
+  });
+
+  // Avatar options for selection
+  // const avatarOptions: AvatarOption[] = [
+  //   { id: "avatar_001", name: "Alex", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" },
+  //   { id: "avatar_002", name: "Sarah", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face" },
+  //   { id: "avatar_003", name: "Michael", image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" },
+  //   { id: "avatar_004", name: "Emily", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face" },
+  //   { id: "avatar_005", name: "David", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face" },
+  //   { id: "avatar_006", name: "Jessica", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face" },
+  //   { id: "avatar_007", name: "Robert", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face" },
+  //   { id: "avatar_008", name: "Amanda", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face" },
+  // ];
+
+
+
+  const [avatars, setAvatars] = useState<AvatarData[]>([
+
+  ]);
+
+  const backgroundOptions = metaData.schema?.enums?.Background?.map(b => b.replace("_", " ")) || [];
+  const strictnessOptions = metaData.schema?.enums?.Strictness || [];
+  const difficultyOptions = metaData.schema?.enums?.ConversationalDifficulty || [];
+  const responseLengthOptions = metaData.schema?.enums?.ResponseLength || [];
+
+  console.log('backgroundOptions--', metaData)
+
+   const loadAvatarConfigurationsData = async () => {
+      try {
+        const response = await fetchAvatarConfigurations();
+        console.log('avatar response--', response)
+        if (response) {
+
+          setaAvatarOptions(response); // <-- updates all constants
+        }
+      } catch (error) {
+        console.error("Failed to fetch metadata:", error);
+        setaAvatarOptions({ constants: {}, schema: { enums: {} } });
+      }
+    };
+
+    const loadMetaData = async () => {
+      try {
+        const response = await fetchMetaData();
+        console.log(' response--', response)
+        if (response) {
+
+          setMetaData(response); // <-- updates all constants
+        }
+      } catch (error) {
+        console.error("Failed to fetch metadata:", error);
+        setMetaData({ constants: {}, schema: { enums: {} } });
+      }
+    };
+    const loadAvatars = async () => {
+      try {
+        await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
+          .catch(() => setOrganizations([]));
+        const apiData = await fetchAvatars();
+
+        // Map API response to AvatarData
+        const mappedAvatars: AvatarData[] = apiData.map((item: any, index: number) => ({
+          id: item.id, // generate numeric ID for local state usage
+          name: item.name || "Untitled Avatar",
+          description: item.description || "-",
+          persona: item.persona || "-",
+          role: item.role_type || "-",
+          selectedAvatarIds: item.avatarConfigs?.map((cfg: any) => cfg.avatarConfig.id) || [],
+          background: item.background?.replace("_", " ") || "Modern Office",
+          personality: item.personality || "-",
+          strictness: item.strictness || "Medium",
+          knowledgeProfile: item.knowledge_profile || "-",
+          allowedTopics: item.allow_topics || "-",
+          conversationDifficulty: item.conversational_difficulty || "Intermediate",
+          responseLength: item.response_length || "Medium",
+          organization: item.organization_id || "Unknown Org",
+          scenarios: 0,
+          documents: 0,
+          uses: 0,
+          status: item.avatarConfigs?.some((cfg: any) => cfg.avatarConfig.status === "ACTIVE") ? "Active" : "Draft",
+          color: "from-blue-500 to-cyan-500" // optional default gradient
+        }));
+
+        setAvatars(mappedAvatars);
+      } catch (error) {
+        console.error("Failed to load avatars:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  useEffect(() => {
+
+   
+    loadMetaData();
+    loadAvatarConfigurationsData();
+    loadAvatars();
+  }, []);
+
+  // if (loading) return <p>Loading avatars...</p>;
+
+  const toggleAvatarSelection = (avatarId: string) => {
+    const currentSelection = formData.selectedAvatarIds || [];
+    if (currentSelection.includes(avatarId)) {
+      setFormData({
+        ...formData,
+        selectedAvatarIds: currentSelection.filter(id => id !== avatarId)
+      });
+    } else {
+      setFormData({
+        ...formData,
+        selectedAvatarIds: [...currentSelection, avatarId]
+      });
+    }
+  };
+
+  const filteredAvatars = avatars.filter(avatar => {
+    const matchesSearch =
+      avatar.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (avatar.description && avatar.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesOrg =
+      selectedOrg === "all" || avatar.organization === selectedOrg;
+
+    return matchesSearch && matchesOrg;
+  });
+
+
+  const handleCreateAvatar = async () => {
+    if (!formData.name || !formData.organization || !formData.selectedAvatarIds) {
+      toast.error("Please fill in required fields and select an avatar");
+      return;
+    }
+
+    try {
+      const payload = {
+        organization_id: formData.organization,
+        name: formData.name,
+        description: formData.description || null,
+        persona: formData.persona || null,
+        role_type: formData.role || null,
+        background: formData.background
+          ? formData.background.replace(/\s+/g, "_")
+          : "Modern_Office",
+        personality: formData.personality || null,
+        strictness: formData.strictness || "Medium",
+        conversational_difficulty: formData.conversationDifficulty || "Intermediate",
+        knowledge_profile: formData.knowledgeProfile || null,
+        allow_topics: formData.allowedTopics || null,
+        response_length: formData.responseLength || "Medium",
+        avatar_config_ids: formData.selectedAvatarIds ? formData.selectedAvatarIds : [],
+      };
+
+      const res = await addAvatar(payload);
+
+      if (res) {
+        toast.success("Avatar created successfully");
+        setIsCreateSheetOpen(false);
+        loadAvatars(); // refresh avatar list
+      } else {
+        toast.error(res.data.message || "Failed to create avatar");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error creating avatar");
+    }
+  };
+
+  const handleEditAvatar = async () => {
+    console.log('selectedAvatar', selectedAvatar)
+    if (!selectedAvatar) return;
+
+    try {
+      const payload = {
+        organization_id: formData.organization,
+        name: formData.name,
+        description: formData.description || null,
+        persona: formData.persona || null,
+        role_type: formData.role || null,
+        background: formData.background
+          ? formData.background.replace(/\s+/g, "_")
+          : "Modern_Office",
+        personality: formData.personality || null,
+        strictness: formData.strictness || "Medium",
+        conversational_difficulty: formData.conversationDifficulty || "Intermediate",
+        knowledge_profile: formData.knowledgeProfile || null,
+        allow_topics: formData.allowedTopics || null,
+        response_length: formData.responseLength || "Medium",
+        avatar_config_ids: formData.selectedAvatarIds ? formData.selectedAvatarIds : [],
+      };
+
+      const res = await editAvatar(selectedAvatar.id, payload);
+
+      if (res) {
+        toast.success("Avatar updated successfully");
+        setIsEditSheetOpen(false);
+        loadAvatars(); // refresh avatar list
+      } else {
+        toast.error(res.data.message || "Failed to update avatar");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error updating avatar");
+    }
+  };
+
+  const handleDeleteAvatar = () => {
+    if (!selectedAvatar) return;
+
+    try {
+      const res = deleteAvatar(selectedAvatar.id);
+
+      if (res) {
+        toast.success("Avatar deleted successfully");
+        setIsDeleteDialogOpen(false);
+        setSelectedAvatar(null);
+        loadAvatars(); // refresh avatar list
+      } else {
+        toast.error("Failed to delete avatar");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error deleting avatar");
+    }
+  };
+
+  const openViewSheet = (avatar: AvatarData) => {
+    setSelectedAvatar(avatar);
+    setIsViewSheetOpen(true);
+  };
+
+  const openEditSheet = (avatar: AvatarData) => {
+    console.log('avatar--', avatar)
+    setSelectedAvatar(avatar);
+    setFormData(avatar);
+    setIsEditSheetOpen(true);
+  };
+
+  const openDeleteDialog = (avatar: AvatarData) => {
+    setSelectedAvatar(avatar);
+    setIsDeleteDialogOpen(true);
+  };
+
+ 
+
   const AvatarViewContent = ({ avatar }: { avatar: AvatarData }) => (
     <div className="space-y-6 py-4">
       {/* Organization */}
       <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Organization</p>
-        <p className="text-sm font-medium text-foreground">{avatar.organization}</p>
+        <p className="text-sm font-medium text-foreground">{getOrganizationName(organizations, avatar.organization)}</p>
       </div>
 
       <Separator />
@@ -492,18 +573,27 @@ const Avatars = () => {
           B. Appearance
         </h3>
         <div className="space-y-3">
-          <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
-            <p className="text-xs text-muted-foreground mb-2">Selected Avatars</p>
-            <div className="flex flex-wrap gap-2">
-              {avatar.selectedAvatarIds.length > 0 ? (
-                avatar.selectedAvatarIds.map(id => (
-                  <Badge key={id} variant="secondary" className="text-xs">{id}</Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No avatars selected</p>
-              )}
-            </div>
-          </div>
+          {avatar.selectedAvatarIds.length > 0 ? (
+            avatar.selectedAvatarIds.map(id => {
+              const config = avatarOptions?.find((opt: any) => opt.id === id);
+
+              if (!config) return null;
+
+              return (
+                <div key={id} className="flex items-center gap-2 bg-muted/40 px-2 py-1 rounded-md">
+                  <img
+                    src={`http://13.51.242.38:4000/${config.photo}`}
+                    alt={config.avatar_name}
+                    className="w-8 h-8 rounded-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                  <span className="text-xs font-medium">{config.avatar_name}</span>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-muted-foreground">No avatars selected</p>
+          )}
           <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
             <p className="text-xs text-muted-foreground mb-1">Background</p>
             <p className="text-sm font-medium">{avatar.background}</p>
@@ -560,7 +650,7 @@ const Avatars = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Avatar Builder</h1>
             <p className="text-muted-foreground mt-2">Create AI-powered roleplay avatars with customizable personalities and behaviors</p>
           </div>
-          <Button 
+          <Button
             onClick={() => { setFormData({ selectedAvatarIds: [] }); setIsCreateSheetOpen(true); }}
             className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
           >
@@ -598,7 +688,7 @@ const Avatars = () => {
           {filteredAvatars.map((avatar) => (
             <Card key={avatar.id} className="border-border/50 hover:border-primary/30 hover:shadow-xl transition-all duration-300 group overflow-hidden">
               <div className={`h-2 bg-gradient-to-r ${avatar.color}`}></div>
-              
+
               <CardHeader className="pb-4">
                 <div className="flex items-start gap-4">
                   <Avatar className="h-16 w-16 border-2 border-border/50">
@@ -610,20 +700,20 @@ const Avatars = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-xl group-hover:text-primary transition-colors">{avatar.name}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">{avatar.organization}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{getOrganizationName(organizations, avatar.organization)}</p>
                         <Badge variant={avatar.status === "Active" ? "default" : "secondary"} className="mt-2">
                           {avatar.status}
                         </Badge>
                       </div>
-                      <div className="text-right">
+                      {/* <div className="text-right">
                         <p className="text-3xl font-bold text-foreground">{avatar.uses}</p>
                         <p className="text-xs text-muted-foreground font-medium">Total Uses</p>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
               </CardHeader>
-              
+
               <CardContent className="space-y-5">
                 {/* Description */}
                 <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
@@ -651,8 +741,8 @@ const Avatars = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2 border-t border-border/30">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => openEditSheet(avatar)}
                     className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
@@ -660,8 +750,8 @@ const Avatars = () => {
                     <Settings className="h-3.5 w-3.5 mr-2" />
                     Configure
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => openViewSheet(avatar)}
                     className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
@@ -669,8 +759,8 @@ const Avatars = () => {
                     <Eye className="h-3.5 w-3.5 mr-2" />
                     View Details
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => openDeleteDialog(avatar)}
                     className="h-9 text-sm border-destructive/50 text-destructive hover:bg-destructive/10"
@@ -691,7 +781,17 @@ const Avatars = () => {
             <SheetTitle>Create New Avatar</SheetTitle>
             <SheetDescription>Configure your AI avatar with metadata, appearance, voice, and behavior settings.</SheetDescription>
           </SheetHeader>
-          <AvatarFormContent />
+          <AvatarFormContent
+  formData={formData}
+  setFormData={setFormData}
+  organizations={organizations}
+  avatarOptions={avatarOptions}
+  backgroundOptions={backgroundOptions}
+  strictnessOptions={strictnessOptions}
+  difficultyOptions={difficultyOptions}
+  responseLengthOptions={responseLengthOptions}
+  toggleAvatarSelection={toggleAvatarSelection}
+/>
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsCreateSheetOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateAvatar}>Create Avatar</Button>
@@ -706,7 +806,18 @@ const Avatars = () => {
             <SheetTitle>Edit Avatar</SheetTitle>
             <SheetDescription>Update your AI avatar configuration.</SheetDescription>
           </SheetHeader>
-          <AvatarFormContent isEdit />
+          <AvatarFormContent
+  isEdit
+  formData={formData}
+  setFormData={setFormData}
+  organizations={organizations}
+  avatarOptions={avatarOptions}
+  backgroundOptions={backgroundOptions}
+  strictnessOptions={strictnessOptions}
+  difficultyOptions={difficultyOptions}
+  responseLengthOptions={responseLengthOptions}
+  toggleAvatarSelection={toggleAvatarSelection}
+/>
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>Cancel</Button>
             <Button onClick={handleEditAvatar}>Save Changes</Button>

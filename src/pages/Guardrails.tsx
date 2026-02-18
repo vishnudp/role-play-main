@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,24 +37,63 @@ import {
 import { toast } from "sonner";
 import { Shield, FileText, Plus, MoreHorizontal, Pencil, Trash2, Search, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchGuardrails, fetchOrganizations, fetchDocuments, fetchUsers, addGuardrail, editGuardrail, deleteGuardrail } from "@/api/apiService";
+import { getOrganizationName } from "../lib/lookupUtils";
 
 // Mock organizations
-const organizations = [
-  { id: "1", name: "Acme Healthcare" },
-  { id: "2", name: "Metro Medical Center" },
-  { id: "3", name: "Pacific Health Systems" },
-  { id: "4", name: "TechCorp" },
-  { id: "5", name: "HealthPlus" },
-];
+// const organizations = [
+//   { id: "1", name: "Acme Healthcare" },
+//   { id: "2", name: "Metro Medical Center" },
+//   { id: "3", name: "Pacific Health Systems" },
+//   { id: "4", name: "TechCorp" },
+//   { id: "5", name: "HealthPlus" },
+// ];
 
-// Mock documents from Document Management
-const availableDocuments = [
-  { id: "1", name: "HIPAA Compliance Guide", organization: "Acme Healthcare" },
-  { id: "2", name: "Employee Training Manual", organization: "Acme Healthcare" },
-  { id: "3", name: "Data Protection Policy", organization: "Metro Medical Center" },
-  { id: "4", name: "BAA Agreement", organization: "Metro Medical Center" },
-  { id: "5", name: "Security Protocols", organization: "Pacific Health Systems" },
-];
+// // Mock documents from Document Management
+// const availableDocuments = [
+//   { id: "1", name: "HIPAA Compliance Guide", organization: "Acme Healthcare" },
+//   { id: "2", name: "Employee Training Manual", organization: "Acme Healthcare" },
+//   { id: "3", name: "Data Protection Policy", organization: "Metro Medical Center" },
+//   { id: "4", name: "BAA Agreement", organization: "Metro Medical Center" },
+//   { id: "5", name: "Security Protocols", organization: "Pacific Health Systems" },
+// ];
+
+interface GuardrailFormProps {
+  formData: {
+    name: string;
+    organizations: string[];
+    instructions: string;
+    documents: string[];
+  };
+  setFormData: React.Dispatch<React.SetStateAction<{
+    name: string;
+    organizations: string[];
+    instructions: string;
+    documents: string[];
+  }>>;
+  organizations: any[];
+  availableDocuments: any[];
+  orgSearchQuery: string;
+  setOrgSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  docSearchQuery: string;
+  setDocSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  isOrgsPopoverOpen: boolean;
+  setIsOrgsPopoverOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isDocsPopoverOpen: boolean;
+  setIsDocsPopoverOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleOrganization: (id: string) => void;
+  removeOrganization: (id: string) => void;
+  toggleDocument: (id: string) => void;
+  removeDocument: (id: string) => void;
+  filteredOrganizations: any[];
+  filteredDocuments: any[];
+  resetForm: () => void;
+  setIsAddSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsEditSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onSubmit: () => void;
+  submitLabel: string;
+}
+
 
 interface Guardrail {
   id: string;
@@ -66,160 +105,31 @@ interface Guardrail {
   createdAt: string;
 }
 
-const Guardrails = () => {
-  const [guardrails, setGuardrails] = useState<Guardrail[]>([
-    {
-      id: "1",
-      name: "HIPAA Compliance Rules",
-      organizations: ["1", "2"],
-      instructions: "1. Always maintain professional and respectful communication.\n2. Follow HIPAA guidelines for all patient-related conversations.",
-      documents: ["1", "3"],
-      status: "Active",
-      createdAt: "2024-01-15"
-    },
-    {
-      id: "2",
-      name: "Sales Communication Guidelines",
-      organizations: ["4", "5"],
-      instructions: "1. Be transparent about product features.\n2. Do not make false claims.",
-      documents: ["2"],
-      status: "Active",
-      createdAt: "2024-01-10"
-    },
-  ]);
-
-  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
-  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
-  const [selectedGuardrail, setSelectedGuardrail] = useState<Guardrail | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  // Popover states
-  const [isOrgsPopoverOpen, setIsOrgsPopoverOpen] = useState(false);
-  const [isDocsPopoverOpen, setIsDocsPopoverOpen] = useState(false);
-  const [orgSearchQuery, setOrgSearchQuery] = useState("");
-  const [docSearchQuery, setDocSearchQuery] = useState("");
-
-  // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    organizations: [] as string[],
-    instructions: "",
-    documents: [] as string[],
-  });
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      organizations: [],
-      instructions: "",
-      documents: [],
-    });
-    setOrgSearchQuery("");
-    setDocSearchQuery("");
-  };
-
-  const handleAddGuardrail = () => {
-    if (!formData.name || formData.organizations.length === 0 || !formData.instructions) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    const newGuardrail: Guardrail = {
-      id: Date.now().toString(),
-      name: formData.name,
-      organizations: formData.organizations,
-      instructions: formData.instructions,
-      documents: formData.documents,
-      status: "Active",
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setGuardrails([...guardrails, newGuardrail]);
-    resetForm();
-    setIsAddSheetOpen(false);
-    toast.success("Guardrail created successfully");
-  };
-
-  const handleEditGuardrail = () => {
-    if (!selectedGuardrail) return;
-    
-    if (!formData.name || formData.organizations.length === 0 || !formData.instructions) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    setGuardrails(guardrails.map(g => 
-      g.id === selectedGuardrail.id 
-        ? { ...g, ...formData }
-        : g
-    ));
-    resetForm();
-    setIsEditSheetOpen(false);
-    setSelectedGuardrail(null);
-    toast.success("Guardrail updated successfully");
-  };
-
-  const handleDeleteGuardrail = (id: string) => {
-    setGuardrails(guardrails.filter(g => g.id !== id));
-    toast.success("Guardrail deleted successfully");
-  };
-
-  const openEditSheet = (guardrail: Guardrail) => {
-    setSelectedGuardrail(guardrail);
-    setFormData({
-      name: guardrail.name,
-      organizations: guardrail.organizations,
-      instructions: guardrail.instructions,
-      documents: guardrail.documents,
-    });
-    setIsEditSheetOpen(true);
-  };
-
-  const toggleOrganization = (orgId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      organizations: prev.organizations.includes(orgId)
-        ? prev.organizations.filter(id => id !== orgId)
-        : [...prev.organizations, orgId]
-    }));
-  };
-
-  const removeOrganization = (orgId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      organizations: prev.organizations.filter(id => id !== orgId)
-    }));
-  };
-
-  const toggleDocument = (docId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      documents: prev.documents.includes(docId)
-        ? prev.documents.filter(id => id !== docId)
-        : [...prev.documents, docId]
-    }));
-  };
-
-  const removeDocument = (docId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      documents: prev.documents.filter(id => id !== docId)
-    }));
-  };
-
-  const filteredOrganizations = organizations.filter(org =>
-    org.name.toLowerCase().includes(orgSearchQuery.toLowerCase())
-  );
-
-  const filteredDocuments = availableDocuments.filter(doc =>
-    doc.name.toLowerCase().includes(docSearchQuery.toLowerCase())
-  );
-
-  const filteredGuardrails = guardrails.filter(g => 
-    g.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const GuardrailForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
+  const GuardrailForm = ({
+  formData,
+  setFormData,
+  organizations,
+  availableDocuments,
+  orgSearchQuery,
+  setOrgSearchQuery,
+  docSearchQuery,
+  setDocSearchQuery,
+  isOrgsPopoverOpen,
+  setIsOrgsPopoverOpen,
+  isDocsPopoverOpen,
+  setIsDocsPopoverOpen,
+  toggleOrganization,
+  removeOrganization,
+  toggleDocument,
+  removeDocument,
+  filteredOrganizations,
+  filteredDocuments,
+  resetForm,
+  setIsAddSheetOpen,
+  setIsEditSheetOpen,
+  onSubmit,
+  submitLabel
+}: GuardrailFormProps) => (
     <>
       <div className="flex-1 overflow-y-auto space-y-6 py-6">
         <div className="space-y-2">
@@ -410,7 +320,7 @@ const Guardrails = () => {
                       />
                       <div className="text-sm">
                         <span className="font-medium">{doc.name}</span>
-                        <span className="text-muted-foreground ml-1">({doc.organization})</span>
+                        <span className="text-muted-foreground ml-1">({getOrganizationName(organizations, doc.organization_id)})</span>
                       </div>
                     </div>
                   ))}
@@ -435,6 +345,244 @@ const Guardrails = () => {
       </SheetFooter>
     </>
   );
+
+const Guardrails = () => {
+  const [guardrails, setGuardrails] = useState<Guardrail[]>([]);
+  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [selectedGuardrail, setSelectedGuardrail] = useState<Guardrail | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [availableDocuments, setDocuments] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+
+  // Popover states
+  const [isOrgsPopoverOpen, setIsOrgsPopoverOpen] = useState(false);
+  const [isDocsPopoverOpen, setIsDocsPopoverOpen] = useState(false);
+  const [orgSearchQuery, setOrgSearchQuery] = useState("");
+  const [docSearchQuery, setDocSearchQuery] = useState("");
+  const [guardrailToDelete, setGuardrailToDelete] = useState<Guardrail | null>(null);
+
+  useEffect(() => {
+   async function loadData() {
+    setLoading(true);
+    try {
+      const fetchedGuardrails = await fetchGuardrails();
+      const normalizedGuardrails = (Array.isArray(fetchedGuardrails) ? fetchedGuardrails : []).map(g => ({
+        id: g.id,
+        name: g.name,
+        instructions: g.instructions,
+        status: g.status || "Active",
+        createdAt: g.created_at,
+        organizations: g.organizations.map((org: any) => org.organization_id), // <-- string array
+        documents: g.documents.map((doc: any) => doc.document_id), // <-- string array
+      }));
+      setGuardrails(normalizedGuardrails);
+
+      const orgs = await fetchOrganizations();
+      setOrganizations(Array.isArray(orgs) ? orgs : []);
+
+      const docs = await fetchDocuments();
+      setDocuments(Array.isArray(docs) ? docs : []);
+
+      const users = await fetchUsers();
+      setUsers(Array.isArray(users) ? users : []);
+    } catch (err) {
+      console.error(err);
+      setGuardrails([]);
+      setOrganizations([]);
+      setDocuments([]);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+  loadData();
+}, []);
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    organizations: [] as string[],
+    instructions: "",
+    documents: [] as string[],
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      organizations: [],
+      instructions: "",
+      documents: [],
+    });
+    setOrgSearchQuery("");
+    setDocSearchQuery("");
+  };
+
+ const handleAddGuardrail = async () => {
+  if (!formData.name || formData.organizations.length === 0 || !formData.instructions) {
+    toast.error("Please fill in all required fields");
+    return;
+  }
+
+  const payload = {
+    name: formData.name,
+    instructions: formData.instructions,
+    organization_ids: formData.organizations, // strings only
+    document_ids: formData.documents,
+  };
+
+  try {
+    await addGuardrail(payload); // call API to create new guardrail
+
+    // Refetch all guardrails to get latest organizations/documents
+    const fetchedGuardrails = await fetchGuardrails();
+    const normalizedGuardrails = (Array.isArray(fetchedGuardrails) ? fetchedGuardrails : []).map(g => ({
+      id: g.id,
+      name: g.name,
+      instructions: g.instructions,
+      status: g.status || "Active",
+      createdAt: g.created_at,
+      organizations: g.organizations.map((org: any) => org.organization_id),
+      documents: g.documents.map((doc: any) => doc.document_id),
+    }));
+    setGuardrails(normalizedGuardrails);
+
+    resetForm();
+    setIsAddSheetOpen(false);
+    toast.success("Guardrail created successfully");
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to add guardrail");
+  }
+};
+
+
+const handleEditGuardrail = async () => {
+  if (!selectedGuardrail) return;
+  if (!formData.name || formData.organizations.length === 0 || !formData.instructions) {
+    toast.error("Please fill in all required fields");
+    return;
+  }
+
+  const payload = {
+    name: formData.name,
+    instructions: formData.instructions,
+    organization_ids: formData.organizations,
+    document_ids: formData.documents,
+  };
+
+  try {
+    await editGuardrail(selectedGuardrail.id, payload); // update API
+
+    // Refetch all guardrails to get latest organizations/documents
+    const fetchedGuardrails = await fetchGuardrails();
+    const normalizedGuardrails = (Array.isArray(fetchedGuardrails) ? fetchedGuardrails : []).map(g => ({
+      id: g.id,
+      name: g.name,
+      instructions: g.instructions,
+      status: g.status || "Active",
+      createdAt: g.created_at,
+      organizations: g.organizations.map((org: any) => org.organization_id),
+      documents: g.documents.map((doc: any) => doc.document_id),
+    }));
+    setGuardrails(normalizedGuardrails);
+
+    resetForm();
+    setSelectedGuardrail(null);
+    setIsEditSheetOpen(false);
+    toast.success("Guardrail updated successfully");
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to update guardrail");
+  }
+};
+
+
+
+const confirmDeleteGuardrail = async () => {
+  if (!guardrailToDelete) return;
+
+  try {
+    await deleteGuardrail(guardrailToDelete.id); // call API
+    setGuardrails(prev => prev.filter(g => g.id !== guardrailToDelete.id));
+    toast.success("Guardrail deleted successfully");
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to delete guardrail");
+  } finally {
+    setGuardrailToDelete(null);
+  }
+};
+
+
+  const handleDeleteGuardrail = (id: string) => {
+    setGuardrails(guardrails.filter(g => g.id !== id));
+    toast.success("Guardrail deleted successfully");
+  };
+
+  const openEditSheet = (guardrail: Guardrail & { organizations: any[], documents: any[] }) => {
+  setSelectedGuardrail(guardrail);
+  setFormData({
+    name: guardrail.name,
+    organizations: guardrail.organizations?.map((org: any) =>
+      typeof org === "string" ? org : org.organization_id
+    ),
+    instructions: guardrail.instructions,
+    documents: guardrail.documents?.map((doc: any) =>
+      typeof doc === "string" ? doc : doc.document_id
+    ),
+  });
+  setIsEditSheetOpen(true);
+};
+
+
+ const toggleOrganization = (orgId: string) => {
+  setFormData(prev => ({
+    ...prev,
+    // always store ONLY strings
+    organizations: prev.organizations.includes(orgId)
+      ? prev.organizations.filter(id => id !== orgId)
+      : [...prev.organizations, orgId]
+  }));
+};
+
+  const removeOrganization = (orgId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      organizations: prev.organizations.filter(id => id !== orgId)
+    }));
+  };
+
+  const toggleDocument = (docId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: prev.documents.includes(docId)
+        ? prev.documents.filter(id => id !== docId)
+        : [...prev.documents, docId]
+    }));
+  };
+
+  const removeDocument = (docId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: prev.documents.filter(id => id !== docId)
+    }));
+  };
+
+  const filteredOrganizations = organizations.filter(org =>
+    org.name.toLowerCase().includes(orgSearchQuery.toLowerCase())
+  );
+
+  const filteredDocuments = availableDocuments.filter(doc =>
+    doc.name.toLowerCase().includes(docSearchQuery.toLowerCase())
+  );
+
+  const filteredGuardrails = guardrails.filter(g =>
+    g.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
 
   return (
     <DashboardLayout>
@@ -513,15 +661,15 @@ const Guardrails = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {guardrail.organizations.slice(0, 2).map(orgId => {
+                            {guardrail.organizations?.slice(0, 2).map(orgId => {
                               const org = organizations.find(o => o.id === orgId);
                               return org ? (
                                 <Badge key={orgId} variant="outline" className="font-normal">
-                                  {org.name}
+                                  {getOrganizationName(organizations, orgId)}
                                 </Badge>
                               ) : null;
                             })}
-                            {guardrail.organizations.length > 2 && (
+                            {guardrail.organizations?.length > 2 && (
                               <Badge variant="secondary" className="font-normal">
                                 +{guardrail.organizations.length - 2} more
                               </Badge>
@@ -532,7 +680,7 @@ const Guardrails = () => {
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />
                             <span className="text-muted-foreground">
-                              {guardrail.documents.length} document(s)
+                              {guardrail.documents?.length} document(s)
                             </span>
                           </div>
                         </TableCell>
@@ -549,14 +697,14 @@ const Guardrails = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="gap-2 cursor-pointer"
                                 onClick={() => openEditSheet(guardrail)}
                               >
                                 <Pencil className="h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="gap-2 cursor-pointer text-destructive focus:text-destructive"
                                 onClick={() => handleDeleteGuardrail(guardrail.id)}
                               >
@@ -588,7 +736,32 @@ const Guardrails = () => {
               Create a new guardrail for organizations
             </SheetDescription>
           </SheetHeader>
-          <GuardrailForm onSubmit={handleAddGuardrail} submitLabel="Add Guardrail" />
+          <GuardrailForm
+  formData={formData}
+  setFormData={setFormData}
+  organizations={organizations}
+  availableDocuments={availableDocuments}
+  orgSearchQuery={orgSearchQuery}
+  setOrgSearchQuery={setOrgSearchQuery}
+  docSearchQuery={docSearchQuery}
+  setDocSearchQuery={setDocSearchQuery}
+  isOrgsPopoverOpen={isOrgsPopoverOpen}
+  setIsOrgsPopoverOpen={setIsOrgsPopoverOpen}
+  isDocsPopoverOpen={isDocsPopoverOpen}
+  setIsDocsPopoverOpen={setIsDocsPopoverOpen}
+  toggleOrganization={toggleOrganization}
+  removeOrganization={removeOrganization}
+  toggleDocument={toggleDocument}
+  removeDocument={removeDocument}
+  filteredOrganizations={filteredOrganizations}
+  filteredDocuments={filteredDocuments}
+  resetForm={resetForm}
+  setIsAddSheetOpen={setIsAddSheetOpen}
+  setIsEditSheetOpen={setIsEditSheetOpen}
+  onSubmit={handleAddGuardrail}
+  submitLabel="Add Guardrail"
+/>
+
         </SheetContent>
       </Sheet>
 
@@ -607,9 +780,49 @@ const Guardrails = () => {
               Update guardrail settings
             </SheetDescription>
           </SheetHeader>
-          <GuardrailForm onSubmit={handleEditGuardrail} submitLabel="Update Guardrail" />
+          <GuardrailForm
+  formData={formData}
+  setFormData={setFormData}
+  organizations={organizations}
+  availableDocuments={availableDocuments}
+  orgSearchQuery={orgSearchQuery}
+  setOrgSearchQuery={setOrgSearchQuery}
+  docSearchQuery={docSearchQuery}
+  setDocSearchQuery={setDocSearchQuery}
+  isOrgsPopoverOpen={isOrgsPopoverOpen}
+  setIsOrgsPopoverOpen={setIsOrgsPopoverOpen}
+  isDocsPopoverOpen={isDocsPopoverOpen}
+  setIsDocsPopoverOpen={setIsDocsPopoverOpen}
+  toggleOrganization={toggleOrganization}
+  removeOrganization={removeOrganization}
+  toggleDocument={toggleDocument}
+  removeDocument={removeDocument}
+  filteredOrganizations={filteredOrganizations}
+  filteredDocuments={filteredDocuments}
+  resetForm={resetForm}
+  setIsAddSheetOpen={setIsAddSheetOpen}
+  setIsEditSheetOpen={setIsEditSheetOpen}
+  onSubmit={handleEditGuardrail}
+  submitLabel="Update Guardrail"
+/>
+
         </SheetContent>
       </Sheet>
+      {/* ✅ Confirmation modal for deletion */}
+      {guardrailToDelete && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[350px]">
+            <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
+            <p className="mb-6">
+              Are you sure you want to delete <strong>{guardrailToDelete.name}</strong>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setGuardrailToDelete(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={confirmDeleteGuardrail}>Delete</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };

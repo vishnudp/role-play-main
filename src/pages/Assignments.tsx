@@ -37,7 +37,7 @@ interface User {
   organization: string;
 }
 
-const Scenarios = () => {
+const Assignments = () => {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
@@ -576,4 +576,4 @@ const Scenarios = () => {
   );
 };
 
-export default Scenarios;
+export default Assignments;

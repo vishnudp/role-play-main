@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { fetchDocuments,fetchOrganizations, uploadDocument, deleteDocument, fetchUsers, fetchPreCallPlans, fetchAvatars, fetchGuardrails, fetchCategories, fetchRolePlays } from "../api/apiService";
+import { getOrganizationName, getAvatarName,getCategoryName,getSubCategoryName,getUserName , formatToLongDate, formatFileSize, handleView, handleDownload} from "../lib/lookupUtils";
 
 interface Document {
   id: number;
@@ -28,7 +30,7 @@ interface Document {
   organization: string;
 }
 
-interface Session {
+interface RolePlay {
   id: number;
   name: string;
   organization: string;
@@ -40,113 +42,105 @@ interface Session {
   documents: number[];
 }
 
-const Sessions = () => {
+const RolePlays = () => {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedRolePlay, setSelectedRolePlay] = useState<RolePlay | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<RolePlay | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
   const [selectedOrganization, setSelectedOrganization] = useState<string>("");
-  const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
+  const [selectedDocuments, setSelectedDocuments] = useState<any>([]);
+  const [selectedAvatars, setSelectedAvatars] = useState<string>("");
+  const [selectedPreCallPlans, setSelectedPreCallPlans] = useState<string>("");
+  const [selectedGuardrails, setSelectedGuardrails] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [prePlans, setPreCallPlans] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [avatars, setAvatars] = useState<any[]>([]);
+  const [guardrails, setGuardrails] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Mock documents data
-  const documents: Document[] = [
-    { id: 1, name: "Sales Playbook 2024.pdf", organization: "TechCorp" },
-    { id: 2, name: "Product Specifications.docx", organization: "TechCorp" },
-    { id: 3, name: "Customer Service Guidelines.pdf", organization: "ServiceHub" },
-    { id: 4, name: "Support Ticket Handling.docx", organization: "ServiceHub" },
-    { id: 5, name: "Negotiation Tactics Guide.pdf", organization: "DealMakers" },
-    { id: 6, name: "Contract Templates.docx", organization: "DealMakers" },
-    { id: 7, name: "Healthcare Compliance.pdf", organization: "HealthFirst" },
-    { id: 8, name: "Patient Privacy Policy.docx", organization: "HealthFirst" },
-  ];
+  // const documents: Document[] = [
+  //   { id: 1, name: "Sales Playbook 2024.pdf", organization: "TechCorp" },
+  //   { id: 2, name: "Product Specifications.docx", organization: "TechCorp" },
+  //   { id: 3, name: "Customer Service Guidelines.pdf", organization: "ServiceHub" },
+  //   { id: 4, name: "Support Ticket Handling.docx", organization: "ServiceHub" },
+  //   { id: 5, name: "Negotiation Tactics Guide.pdf", organization: "DealMakers" },
+  //   { id: 6, name: "Contract Templates.docx", organization: "DealMakers" },
+  //   { id: 7, name: "Healthcare Compliance.pdf", organization: "HealthFirst" },
+  //   { id: 8, name: "Patient Privacy Policy.docx", organization: "HealthFirst" },
+  // ];
 
-  const [sessions, setSessions] = useState<Session[]>([
-    {
-      id: 1,
-      name: "Sales Consultation - Q1 2024",
-      organization: "TechCorp",
-      avatar: "Sales Consultant",
-      preCallPlan: "Enterprise Sales Strategy",
-      category: "Sales",
-      subcategory: "Enterprise",
-      guardrail: "Standard Compliance",
-      documents: [1, 2],
-    },
-    {
-      id: 2,
-      name: "Customer Support Training",
-      organization: "ServiceHub",
-      avatar: "Customer Support",
-      preCallPlan: "Customer Handling Protocol",
-      category: "Support",
-      subcategory: "Customer Service",
-      guardrail: "HIPAA Guidelines",
-      documents: [3, 4],
-    },
-    {
-      id: 3,
-      name: "Technical Troubleshooting",
-      organization: "TechCorp",
-      avatar: "Technical Expert",
-      preCallPlan: "Technical Assessment",
-      category: "Technical",
-      subcategory: "Troubleshooting",
-      guardrail: "Standard Compliance",
-      documents: [1],
-    },
-    {
-      id: 4,
-      name: "Negotiation Practice",
-      organization: "DealMakers",
-      avatar: "Negotiation Specialist",
-      preCallPlan: "Negotiation Framework",
-      category: "Sales",
-      subcategory: "Negotiation",
-      guardrail: "Financial Regulations",
-      documents: [5, 6],
-    },
-    {
-      id: 5,
-      name: "Product Demo Training",
-      organization: "TechCorp",
-      avatar: "Sales Consultant",
-      preCallPlan: "Enterprise Sales Strategy",
-      category: "Sales",
-      subcategory: "Demo",
-      guardrail: "Standard Compliance",
-      documents: [],
-    },
+  const [roleplays, setRolePlay] = useState<RolePlay[]>([
+
   ]);
 
   // Mock data for dropdowns
-  const organizations = ["TechCorp", "ServiceHub", "DealMakers", "HealthFirst"];
-  const prePlans = [
-    "Enterprise Sales Strategy",
-    "Customer Handling Protocol",
-    "Technical Assessment",
-    "Negotiation Framework",
-  ];
-  const avatars = ["Sales Consultant", "Customer Support", "Technical Expert", "Negotiation Specialist"];
-  const guardrails = ["Standard Compliance", "HIPAA Guidelines", "Financial Regulations", "Custom Safety Rules"];
+ // const organizations = ["TechCorp", "ServiceHub", "DealMakers", "HealthFirst"];
+  // const prePlans = [
+  //   "Enterprise Sales Strategy",
+  //   "Customer Handling Protocol",
+  //   "Technical Assessment",
+  //   "Negotiation Framework",
+  // ];
+  //const avatars = ["Sales Consultant", "Customer Support", "Technical Expert", "Negotiation Specialist"];
+  //const guardrails = ["Standard Compliance", "HIPAA Guidelines", "Financial Regulations", "Custom Safety Rules"];
 
   // Category and subcategory data
-  const categories: { [key: string]: string[] } = {
-    Sales: ["Enterprise", "Negotiation", "Demo", "Cold Calling"],
-    Support: ["Customer Service", "Technical Support", "Billing"],
-    Technical: ["Troubleshooting", "Installation", "Configuration"],
-    Training: ["Onboarding", "Product Knowledge", "Soft Skills"],
-  };
+  // const categories: { [key: string]: string[] } = {
+  //   Sales: ["Enterprise", "Negotiation", "Demo", "Cold Calling"],
+  //   Support: ["Customer Service", "Technical Support", "Billing"],
+  //   Technical: ["Troubleshooting", "Installation", "Configuration"],
+  //   Training: ["Onboarding", "Product Knowledge", "Soft Skills"],
+  // };
 
-  const subcategories = selectedCategory ? categories[selectedCategory] || [] : [];
 
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        await fetchRolePlays()
+          .then((roleplays) => setRolePlay(Array.isArray(roleplays) ? roleplays : []))
+          .catch(() => setRolePlay([]));
+        await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
+          .catch(() => setOrganizations([]));
+        await fetchDocuments()
+          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
+          .catch(() => setDocuments([]));
+        await fetchUsers()
+          .then((users) => setUsers(Array.isArray(users) ? users : []))
+          .catch(() => setUsers([]));
+        await fetchPreCallPlans()
+          .then((prePlans) => setPreCallPlans(Array.isArray(prePlans) ? prePlans : []))
+          .catch(() => setPreCallPlans([]));
+        await fetchAvatars()
+          .then((avatars) => setAvatars(Array.isArray(avatars) ? avatars : []))
+          .catch(() => setAvatars([]));
+        await fetchGuardrails()
+          .then((guardrails) => setGuardrails(Array.isArray(guardrails) ? guardrails : []))
+          .catch(() => setGuardrails([]));
+         await fetchCategories()
+          .then((categories) => setCategories(Array.isArray(categories) ? categories : []))
+          .catch(() => setCategories([]));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
   // Filter documents based on selected organization
   const filteredDocuments = selectedOrganization
-    ? documents.filter((doc) => doc.organization === selectedOrganization)
+    ? documents.filter((doc) => doc.organization_id === selectedOrganization)
     : [];
+
+  const subcategories = selectedCategory ? categories.find((cat) => cat.id === selectedCategory)?.children || [] : [];
 
   const handleDocumentToggle = (documentId: number) => {
     setSelectedDocuments((prev) =>
@@ -162,51 +156,60 @@ const Sessions = () => {
     }
   };
 
-  const handleCreateSession = () => {
+  const handleCreateRolePlay = () => {
     setIsCreateSheetOpen(false);
     // Reset form
     setSelectedCategory("");
     setSelectedSubcategory("");
     setSelectedOrganization("");
     setSelectedDocuments([]);
+    setSelectedPreCallPlans("");
+    setSelectedAvatars("");
+    setSelectedGuardrails("");
     setIsActive(true);
   };
 
-  const handleEditSession = (session: Session) => {
-    setSelectedSession(session);
-    setSelectedCategory(session.category);
-    setSelectedSubcategory(session.subcategory);
-    setSelectedOrganization(session.organization);
-    setSelectedDocuments(session.documents || []);
+  const handleEditRolePlay = (roleplay: RolePlay) => {
+    setSelectedRolePlay(roleplay);
+    setSelectedCategory(roleplay.category_id);
+    setSelectedSubcategory(roleplay.subcategory_id);
+    setSelectedOrganization(roleplay.organization_id);
+    setSelectedDocuments(roleplay.document_id || []);
+    setSelectedPreCallPlans(roleplay.precall_plan_id);
+    setSelectedAvatars(roleplay.avatar_id);
+    setSelectedGuardrails(roleplay.guardrail_id);
     setIsActive(true);
     setIsEditSheetOpen(true);
   };
 
-  const handleUpdateSession = () => {
+  const handleUpdateRolePlay = () => {
     setIsEditSheetOpen(false);
-    setSelectedSession(null);
+    setSelectedRolePlay(null);
     setSelectedCategory("");
     setSelectedSubcategory("");
     setSelectedOrganization("");
     setSelectedDocuments([]);
+    setSelectedPreCallPlans("");
+    setSelectedAvatars("");
+    setSelectedGuardrails("");
     toast.success("Roleplay updated successfully");
   };
 
-  const handleDeleteClick = (session: Session) => {
-    setSessionToDelete(session);
+  const handleDeleteClick = (roleplay: RolePlay) => {
+    setSessionToDelete(roleplay);
     setIsDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = () => {
     if (sessionToDelete) {
-      setSessions(sessions.filter((s) => s.id !== sessionToDelete.id));
+      setRolePlay(roleplays.filter((s) => s.id !== sessionToDelete.id));
       toast.success("Roleplay deleted successfully");
     }
     setIsDeleteDialogOpen(false);
     setSessionToDelete(null);
   };
 
-  const SessionForm = ({ isEdit = false }: { isEdit?: boolean }) => (
+  const RolePlaysForm = ({ isEdit = false }: { isEdit?: boolean }) => (
     <div className="space-y-6 py-6">
       {/* Organization */}
       <div className="space-y-2">
@@ -225,8 +228,8 @@ const Sessions = () => {
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
             {organizations.map((org) => (
-              <SelectItem key={org} value={org}>
-                {org}
+              <SelectItem key={org?.id} value={org?.id}>
+                {org.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -241,7 +244,7 @@ const Sessions = () => {
         <Input
           id="sessionName"
           placeholder="Enter roleplay name"
-          defaultValue={isEdit && selectedSession ? selectedSession.name : ""}
+          defaultValue={isEdit && selectedRolePlay ? selectedRolePlay.name : ""}
           className="h-11 bg-background border-border/50"
         />
       </div>
@@ -273,9 +276,9 @@ const Sessions = () => {
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
-            {Object.keys(categories).map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
+            {categories.map((cat:any) => (
+              <SelectItem key={cat?.id} value={cat?.id}>
+                {cat?.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -293,8 +296,8 @@ const Sessions = () => {
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
             {subcategories.map((sub) => (
-              <SelectItem key={sub} value={sub}>
-                {sub}
+              <SelectItem key={sub?.id} value={sub?.id}>
+                {sub?.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -306,14 +309,17 @@ const Sessions = () => {
         <Label htmlFor="prePlan">
           Pre-Call Plan <span className="text-destructive">*</span>
         </Label>
-        <Select defaultValue={isEdit && selectedSession ? selectedSession.preCallPlan : undefined}>
+        <Select value={selectedPreCallPlans}
+          onValueChange={(value) => {
+            setSelectedPreCallPlans(value);
+          }}>
           <SelectTrigger className="h-11 bg-background border-border/50">
             <SelectValue placeholder="Select pre-call plan" />
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
             {prePlans.map((plan) => (
-              <SelectItem key={plan} value={plan}>
-                {plan}
+              <SelectItem key={plan?.id} value={plan?.id}>
+                {plan?.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -325,14 +331,17 @@ const Sessions = () => {
         <Label htmlFor="avatar">
           Avatar <span className="text-destructive">*</span>
         </Label>
-        <Select defaultValue={isEdit && selectedSession ? selectedSession.avatar : undefined}>
+        <Select value={selectedAvatars}
+          onValueChange={(value) => {
+            setSelectedAvatars(value);
+          }}>
           <SelectTrigger className="h-11 bg-background border-border/50">
             <SelectValue placeholder="Select avatar" />
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
             {avatars.map((avatar) => (
-              <SelectItem key={avatar} value={avatar}>
-                {avatar}
+              <SelectItem key={avatar?.id} value={avatar?.id}>
+                {avatar?.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -342,14 +351,17 @@ const Sessions = () => {
       {/* Guardrails */}
       <div className="space-y-2">
         <Label htmlFor="guardrails">Guardrails</Label>
-        <Select defaultValue={isEdit && selectedSession ? selectedSession.guardrail : undefined}>
+        <Select value={selectedGuardrails}
+          onValueChange={(value) => {
+            setSelectedGuardrails(value);
+          }}>
           <SelectTrigger className="h-11 bg-background border-border/50">
             <SelectValue placeholder="Select guardrails" />
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
             {guardrails.map((guardrail) => (
-              <SelectItem key={guardrail} value={guardrail}>
-                {guardrail}
+              <SelectItem key={guardrail?.id} value={guardrail?.id}>
+                {guardrail?.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -472,25 +484,25 @@ const Sessions = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.map((session) => (
-                  <TableRow key={session.id} className="border-border/50 hover:bg-muted/30">
+                {roleplays.map((roleplay) => (
+                  <TableRow key={roleplay.id} className="border-border/50 hover:bg-muted/30">
                     <TableCell>
-                      <p className="font-semibold text-foreground">{session.name}</p>
+                      <p className="font-semibold text-foreground">{roleplay.name}</p>
                     </TableCell>
                     <TableCell>
-                      <p className="text-foreground">{session.organization}</p>
+                      <p className="text-foreground">{getOrganizationName(organizations, roleplay.organization_id)}</p>
                     </TableCell>
                     <TableCell>
                       <p className="text-foreground">
-                        {session.category} / {session.subcategory}
+                        {getCategoryName(categories, roleplay.category_id)} / {getSubCategoryName(categories, roleplay.category_id, roleplay.subcategory_id)}
                       </p>
                     </TableCell>
                     <TableCell>
-                      <p className="text-foreground">{session.avatar}</p>
+                      <p className="text-foreground">{getAvatarName(avatars, roleplay.avatar_id)}</p>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditSession(session)}>
+                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRolePlay(roleplay)}>
                           <Edit className="h-3.5 w-3.5 mr-1.5" />
                           Edit
                         </Button>
@@ -498,7 +510,7 @@ const Sessions = () => {
                           variant="outline"
                           size="sm"
                           className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteClick(session)}
+                          onClick={() => handleDeleteClick(roleplay)}
                         >
                           <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                           Delete
@@ -521,7 +533,7 @@ const Sessions = () => {
               <SheetTitle className="text-xl font-semibold">Add Roleplay</SheetTitle>
               <SheetDescription>Configure a new roleplay with all required parameters.</SheetDescription>
             </SheetHeader>
-            <SessionForm />
+            <RolePlaysForm />
           </div>
 
           <SheetFooter className="border-t bg-background p-6 mt-auto">
@@ -529,7 +541,7 @@ const Sessions = () => {
               <Button variant="outline" onClick={() => setIsCreateSheetOpen(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button onClick={handleCreateSession} className="flex-1 bg-gradient-primary hover:shadow-glow">
+              <Button onClick={handleCreateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow">
                 Add Roleplay
               </Button>
             </div>
@@ -545,7 +557,7 @@ const Sessions = () => {
               <SheetTitle className="text-xl font-semibold">Edit Roleplay</SheetTitle>
               <SheetDescription>Update roleplay configuration and parameters.</SheetDescription>
             </SheetHeader>
-            <SessionForm isEdit />
+            <RolePlaysForm isEdit />
           </div>
 
           <SheetFooter className="border-t bg-background p-6 mt-auto">
@@ -553,7 +565,7 @@ const Sessions = () => {
               <Button variant="outline" onClick={() => setIsEditSheetOpen(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button onClick={handleUpdateSession} className="flex-1 bg-gradient-primary hover:shadow-glow">
+              <Button onClick={handleUpdateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow">
                 Update Roleplay
               </Button>
             </div>
@@ -585,4 +597,4 @@ const Sessions = () => {
   );
 };
 
-export default Sessions;
+export default RolePlays;

@@ -14,6 +14,22 @@ export function getOrganizationName(organizations: any[], id: string): string {
   return org?.name || 'Unknown';
 }
 
+export function getAvatarName(avatars: any[], id: string): string {
+  const avatar = avatars.find((a) => a.id === id);
+  return avatar?.name || 'Unknown';
+}
+
+export function getCategoryName(categories: any[], id: string): string {
+  const category = categories.find((c) => c.id === id);
+  return category?.name || 'Unknown';
+}
+
+export function getSubCategoryName(categories: any[], category_id: string, id: string): string {
+  const category = categories.find((c) => c.id === category_id);
+  const subcategory = category?.children?.find((sc) => sc.id === id);
+  return subcategory?.name || 'Unknown';
+}
+
 /**
  * Get user name by id from users array
  * @param users Array of user objects
@@ -60,11 +76,11 @@ export function formatFileSize(bytes) {
     unitIndex++;
   }
 
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
+  return `${size?.toFixed(1)} ${units[unitIndex]}`;
 }
 
 export function handleView(doc: any)  {
-  const fileUrl = doc.url || doc.url || doc.path;
+  const fileUrl = doc.url || doc.url || doc.path || doc.photo;
 
   if (!fileUrl) {
     toast.error("File URL not available");
@@ -76,7 +92,7 @@ export function handleView(doc: any)  {
 };
 
 export async function handleDownload(doc: any)  {
-  const fileUrl = doc.url || doc.url || doc.path;
+  const fileUrl = doc.url || doc.url || doc.path || doc.photo;
 
   if (!fileUrl) {
     toast.error("File URL not available");
