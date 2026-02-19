@@ -11,8 +11,21 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFo
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
+import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, fetchOrganizations, addOrganizations, editOrganizations, deleteOrganizations } from "../api/apiService";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 interface Document {
   id: string;
   name: string;
@@ -25,6 +38,13 @@ const Organizations = () => {
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<any>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [orgToDelete, setOrgToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
+  
   const [currentDocument, setCurrentDocument] = useState<Document>({
     id: Date.now().toString(),
     name: "",
@@ -32,47 +52,235 @@ const Organizations = () => {
     file: null
   });
 
-  const organizations = [
-    {
-      id: 1,
-      name: "TechCorp Solutions",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=TC",
-      ownerEmail: "john@techcorp.com",
-      primaryPhone: "+1 234 567 8900",
-      address: "123 Tech Street, San Francisco, CA 94102",
-      contactEmail: "contact@techcorp.com",
-      contactPhone: "+1 234 567 8901",
-      users: 156,
-      documents: 34,
-      status: "Active"
-    },
-    {
-      id: 2,
-      name: "HealthPlus Medical",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=HP",
-      ownerEmail: "sarah@healthplus.com",
-      primaryPhone: "+1 234 567 8902",
-      address: "456 Medical Ave, Boston, MA 02101",
-      contactEmail: "info@healthplus.com",
-      contactPhone: "+1 234 567 8903",
-      users: 89,
-      documents: 28,
-      status: "Active"
-    },
-    {
-      id: 3,
-      name: "InnovateTech Inc",
-      logo: "https://api.dicebear.com/7.x/initials/svg?seed=IT",
-      ownerEmail: "michael@innovatetech.com",
-      primaryPhone: "+1 234 567 8904",
-      address: "789 Innovation Blvd, Austin, TX 78701",
-      contactEmail: "support@innovatetech.com",
-      contactPhone: "+1 234 567 8905",
-      users: 234,
-      documents: 52,
-      status: "Active"
-    },
-  ];
+  const [formData, setFormData] = useState<any>({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    address: "",
+    description: "",
+    contact_person_name: "",
+    contact_person_phone: "",
+    contact_person_email: "",
+    is_active: true,
+  });
+
+  const handleInputChange = (key: string, value: any) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
+          .catch(() => setOrganizations([]));
+        await fetchDocuments()
+          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
+          .catch(() => setDocuments([]));
+        await fetchUsers()
+          .then((users) => setUsers(Array.isArray(users) ? users : []))
+          .catch(() => setUsers([]));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  // const organizations = [
+  //   {
+  //     id: 1,
+  //     name: "TechCorp Solutions",
+  //     logo: "https://api.dicebear.com/7.x/initials/svg?seed=TC",
+  //     ownerEmail: "john@techcorp.com",
+  //     primaryPhone: "+1 234 567 8900",
+  //     address: "123 Tech Street, San Francisco, CA 94102",
+  //     contactEmail: "contact@techcorp.com",
+  //     contactPhone: "+1 234 567 8901",
+  //     users: 156,
+  //     documents: 34,
+  //     status: "Active"
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "HealthPlus Medical",
+  //     logo: "https://api.dicebear.com/7.x/initials/svg?seed=HP",
+  //     ownerEmail: "sarah@healthplus.com",
+  //     primaryPhone: "+1 234 567 8902",
+  //     address: "456 Medical Ave, Boston, MA 02101",
+  //     contactEmail: "info@healthplus.com",
+  //     contactPhone: "+1 234 567 8903",
+  //     users: 89,
+  //     documents: 28,
+  //     status: "Active"
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "InnovateTech Inc",
+  //     logo: "https://api.dicebear.com/7.x/initials/svg?seed=IT",
+  //     ownerEmail: "michael@innovatetech.com",
+  //     primaryPhone: "+1 234 567 8904",
+  //     address: "789 Innovation Blvd, Austin, TX 78701",
+  //     contactEmail: "support@innovatetech.com",
+  //     contactPhone: "+1 234 567 8905",
+  //     users: 234,
+  //     documents: 52,
+  //     status: "Active"
+  //   },
+  // ];
+
+  const handleCreateOrganization = async () => {
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        address: formData.address,
+        description: formData.description,
+        contact_person_name: formData.contact_person_name,
+        contact_person_phone: formData.contact_person_phone,
+        contact_person_email: formData.contact_person_email,
+        is_active: formData.is_active,
+      };
+
+      const res = await addOrganizations(payload);
+
+      setOrganizations((prev) => [...prev, res.data]);
+
+      setIsAddSheetOpen(false);
+
+      const updatedOrgs = await fetchOrganizations();
+      setOrganizations(Array.isArray(updatedOrgs) ? updatedOrgs : []);
+
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        phone: "",
+        address: "",
+        description: "",
+        contact_person_name: "",
+        contact_person_phone: "",
+        contact_person_email: "",
+        is_active: true,
+      });
+      toast.success("Organization created successfully!");
+    } catch (error) {
+      console.error("Create org failed:", error);
+      toast.error("Failed to create organization.");
+    }
+  };
+
+  const handleEditOrg = (org: any) => {
+    setSelectedOrg(org);
+
+    setFormData({
+  name: org.name || "",
+  email: org.email || "",
+  password: "",
+  phone: org.phone || "",
+  address: org.organization?.address || "",
+  description: org.organization?.description || "",
+  contact_person_name: org.organization?.contact_person_name || "",
+  contact_person_phone: org.organization?.contact_person_phone || "",
+  contact_person_email: org.organization?.contact_person_email || "",
+  is_active: org.is_active ?? true,
+});
+
+    setIsEditSheetOpen(true);
+  };
+
+  const handleDeleteOrganization = async () => {
+    if (!orgToDelete) return;
+
+    try {
+      setIsDeleting(true);
+
+      await deleteOrganizations(orgToDelete.id);
+
+      setOrganizations((prev) =>
+        prev.filter((org) => org.id !== orgToDelete.id)
+      );
+
+      setOrgToDelete(null);
+      toast.success("Organization deleted successfully!");
+    } catch (error) {
+      console.error("Delete failed:", error);
+      toast.error("Failed to delete organization.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+
+
+  const handleUpdateOrganization = async () => {
+    if (!selectedOrg) return;
+
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        description: formData.description,
+        contact_person_name: formData.contact_person_name,
+        contact_person_phone: formData.contact_person_phone,
+        contact_person_email: formData.contact_person_email,
+        is_active: formData.is_active,
+      };
+
+      // Only send password if filled
+      if (formData.password) {
+        payload["password"] = formData.password;
+      }
+
+      await editOrganizations(selectedOrg.id, payload);
+
+      const updatedOrgs = await fetchOrganizations();
+      setOrganizations(Array.isArray(updatedOrgs) ? updatedOrgs : []);
+
+      setOrganizations((prev) =>
+        prev.map((org) =>
+          org.id === selectedOrg.id ? { ...org, ...payload } : org
+        )
+      );
+
+      setIsEditSheetOpen(false);
+      setSelectedOrg(null);
+      toast.success("Organization updated successfully!");
+    } catch (error) {
+      console.error("Update failed:", error);
+      toast.error("Failed to update organization.");
+    }
+  };
+
+  const handleViewOrg = (org: any) => {
+  setSelectedOrg(org);
+
+  setFormData({
+  name: org.name || "",
+  email: org.email || "",
+  password: "",
+  phone: org.phone || "",
+  address: org.organization?.address || "",
+  description: org.organization?.description || "",
+  contact_person_name: org.organization?.contact_person_name || "",
+  contact_person_phone: org.organization?.contact_person_phone || "",
+  contact_person_email: org.organization?.contact_person_email || "",
+  is_active: org.is_active ?? true,
+});
+
+  setIsViewSheetOpen(true);
+};
+
 
   const handleAddDocument = () => {
     if (currentDocument.name.trim()) {
@@ -108,10 +316,10 @@ const Organizations = () => {
     }
   };
 
-  const handleEditOrg = (org: any) => {
-    setSelectedOrg(org);
-    setIsEditSheetOpen(true);
-  };
+  // const handleEditOrg = (org: any) => {
+  //   setSelectedOrg(org);
+  //   setIsEditSheetOpen(true);
+  // };
 
   return (
     <DashboardLayout>
@@ -122,7 +330,7 @@ const Organizations = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Organizations</h1>
             <p className="text-muted-foreground mt-2">Manage multi-tenant organizations and their isolated data spaces</p>
           </div>
-          <Button 
+          <Button
             onClick={() => setIsAddSheetOpen(true)}
             className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
           >
@@ -159,8 +367,8 @@ const Organizations = () => {
                       <p className="font-semibold text-foreground">{org.name}</p>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={org.status === "Active" ? "default" : "secondary"}>
-                        {org.status}
+                      <Badge variant={org.is_active ? "default" : "secondary"}>
+                        {org.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -169,10 +377,51 @@ const Organizations = () => {
                           <Edit className="h-3.5 w-3.5 mr-1.5" />
                           Edit
                         </Button>
-                        
-                        <Button variant="outline" size="sm" className="h-8">
+
+                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewOrg(org)}>
                           View
                         </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => setOrgToDelete(org)}
+                            >
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete Organization
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete{" "}
+                                <strong>{org.name}</strong>?
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            <AlertDialogFooter>
+                              <AlertDialogCancel onClick={() => setOrgToDelete(null)}>
+                                Cancel
+                              </AlertDialogCancel>
+
+                              <AlertDialogAction
+                                onClick={handleDeleteOrganization}
+                                disabled={isDeleting}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
                       </div>
                     </TableCell>
                   </TableRow>
@@ -191,7 +440,7 @@ const Organizations = () => {
                   <SheetTitle className="text-2xl">Add Organization</SheetTitle>
                   <SheetDescription>Create a new organization with isolated data space</SheetDescription>
                 </SheetHeader>
-                
+
                 <div className="space-y-6 py-6">
                   {/* Basic Information */}
                   <div className="space-y-4">
@@ -227,16 +476,24 @@ const Organizations = () => {
                     </div>
                   </div>
 
-                
+
 
                   {/* Contact Information */}
                   <div className="space-y-4 border-t pt-4">
                     <h3 className="text-lg font-semibold text-foreground">Contact Information</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
+                        <Label htmlFor="contact-name">Contact Name</Label>
+                        <Input id="contact-name" type="text" placeholder="Enter contact name" />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="contact-email">Contact Email</Label>
                         <Input id="contact-email" type="email" placeholder="contact@example.com" />
                       </div>
+                      
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                     
                       <div className="space-y-2">
                         <Label htmlFor="contact-phone">Contact Phone</Label>
                         <Input id="contact-phone" type="tel" placeholder="+1 234 567 8900" />
@@ -262,7 +519,7 @@ const Organizations = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsAddSheetOpen(false)}>
                   Cancel
                 </Button>
-                <Button className="flex-1 bg-gradient-primary">
+                <Button className="flex-1 bg-gradient-primary" onClick={handleCreateOrganization}>
                   Create Organization
                 </Button>
               </div>
@@ -279,7 +536,7 @@ const Organizations = () => {
                   <SheetTitle className="text-2xl">Edit Organization</SheetTitle>
                   <SheetDescription>Update organization details and settings</SheetDescription>
                 </SheetHeader>
-                
+
                 {selectedOrg && (
                   <div className="space-y-6 py-6">
                     {/* Basic Information */}
@@ -287,17 +544,19 @@ const Organizations = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="edit-entity-name">Entity Name *</Label>
-                          <Input id="edit-entity-name" defaultValue={selectedOrg.name} required />
+                          <Input id="edit-entity-name" value={formData.name}
+onChange={(e) => handleInputChange("name", e.target.value)} required />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-entity-address">Entity Address</Label>
-                          <Input id="edit-entity-address" defaultValue={selectedOrg.address} />
+                          <Input id="edit-entity-address" value={formData.address}
+onChange={(e) => handleInputChange("address", e.target.value)} />
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="edit-description">Description</Label>
-                        <Textarea id="edit-description" placeholder="Enter organization description" rows={3} />
+                        <Textarea id="edit-description" placeholder="Enter Description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} rows={3} />
                       </div>
                     </div>
 
@@ -307,11 +566,14 @@ const Organizations = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="edit-login-email">Login Email *</Label>
-                          <Input id="edit-login-email" type="email" placeholder="login@example.com" required />
+                          <Input id="edit-login-email" type="email" placeholder="login@example.com" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-login-password">Password</Label>
-                          <Input id="edit-login-password" type="password" placeholder="Leave blank to keep current" />
+                          <Input id="edit-login-password" type="password" placeholder="Leave blank to keep current" 
+                           value={formData.password}
+  onChange={(e) => handleInputChange("password", e.target.value)}
+  />
                         </div>
                       </div>
                     </div>
@@ -321,12 +583,21 @@ const Organizations = () => {
                       <h3 className="text-lg font-semibold text-foreground">Contact Information</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-contact-email">Contact Email</Label>
-                          <Input id="edit-contact-email" type="email" defaultValue={selectedOrg.contactEmail} />
+                          <Label htmlFor="edit-contact-name">Contact Name</Label>
+                          <Input id="edit-contact-name" type="text" value={formData.contact_person_name}
+  onChange={(e) => handleInputChange("contact_person_name", e.target.value)} />
                         </div>
                         <div className="space-y-2">
+                          <Label htmlFor="edit-contact-email">Contact Email</Label>
+                          <Input id="edit-contact-email" type="email" value={formData.contact_person_email}
+  onChange={(e) => handleInputChange("contact_person_email", e.target.value)} />
+                        </div>
+                      </div>
+                       <div className="grid grid-cols-2 gap-4">
+                        
+                        <div className="space-y-2">
                           <Label htmlFor="edit-contact-phone">Contact Phone</Label>
-                          <Input id="edit-contact-phone" type="tel" defaultValue={selectedOrg.contactPhone} />
+                          <Input id="edit-contact-phone" type="tel" value={formData.contact_person_phone} onChange={(e) => handleInputChange("contact_person_phone", e.target.value)} />
                         </div>
                       </div>
                     </div>
@@ -337,7 +608,8 @@ const Organizations = () => {
                         <Label htmlFor="edit-active-status">Active</Label>
                         <p className="text-sm text-muted-foreground">Enable this organization</p>
                       </div>
-                      <Switch id="edit-active-status" defaultChecked={selectedOrg.status === "Active"} />
+                      <Switch id="edit-active-status" checked={formData.is_active}
+  onCheckedChange={(val) => handleInputChange("is_active", val)} />
                     </div>
                   </div>
                 )}
@@ -350,13 +622,83 @@ const Organizations = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsEditSheetOpen(false)}>
                   Cancel
                 </Button>
-                <Button className="flex-1 bg-gradient-primary">
+                <Button className="flex-1 bg-gradient-primary" onClick={handleUpdateOrganization}>
                   Save Changes
                 </Button>
               </div>
             </SheetFooter>
           </SheetContent>
         </Sheet>
+
+        {/* View Organization Sheet */}
+<Sheet open={isViewSheetOpen} onOpenChange={setIsViewSheetOpen}>
+  <SheetContent side="right" className="w-full sm:max-w-2xl">
+    <div className="p-6 space-y-6">
+      <SheetHeader>
+        <SheetTitle>View Organization</SheetTitle>
+        <SheetDescription>Read-only organization details</SheetDescription>
+      </SheetHeader>
+
+      {selectedOrg && (
+        <div className="space-y-4">
+
+          <div>
+            <Label>Entity Name</Label>
+            <Input value={formData.name} disabled />
+          </div>
+
+          <div>
+            <Label>Email</Label>
+            <Input value={formData.email} disabled />
+          </div>
+
+          <div>
+            <Label>Phone</Label>
+            <Input value={formData.phone} disabled />
+          </div>
+
+          <div>
+            <Label>Address</Label>
+            <Input value={formData.address} disabled />
+          </div>
+
+          <div>
+            <Label>Description</Label>
+            <Textarea value={formData.description} disabled />
+          </div>
+
+          <div>
+            <Label>Contact Person Name</Label>
+            <Input value={formData.contact_person_name} disabled />
+          </div>
+
+          <div>
+            <Label>Contact Person Phone</Label>
+            <Input value={formData.contact_person_phone} disabled />
+          </div>
+
+          <div>
+            <Label>Contact Person Email</Label>
+            <Input value={formData.contact_person_email} disabled />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Active</Label>
+            <Switch checked={formData.is_active} disabled />
+          </div>
+
+        </div>
+      )}
+
+      <SheetFooter>
+        <Button onClick={() => setIsViewSheetOpen(false)}>
+          Close
+        </Button>
+      </SheetFooter>
+    </div>
+  </SheetContent>
+</Sheet>
+
       </div>
     </DashboardLayout>
   );

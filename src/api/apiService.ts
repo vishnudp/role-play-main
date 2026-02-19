@@ -6,6 +6,23 @@ export async function fetchOrganizations() {
   return res.data.data;
 }
 
+export async function addOrganizations(payload:any) {
+  const res = await apiClient.post("/organizations", payload);
+  return res.data.data; // returns the created Organizations
+}
+
+// Edit an existing  Organizations
+export async function editOrganizations(id: any, payload: any) {
+  const res = await apiClient.put(`/organizations/${id}`, payload);
+  return res.data.data; // returns the updated Organizations
+}
+
+// Delete a  Organizations
+export async function deleteOrganizations(id: any) {
+  const res = await apiClient.delete(`/organizations/${id}`);
+  return res.data.data; // can return some confirmation or the deleted object
+}
+
 export async function fetchUsers() {
   const res = await apiClient.get('/users');
   return res.data.data;
