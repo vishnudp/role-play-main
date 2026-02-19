@@ -21,8 +21,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { fetchDocuments,fetchOrganizations, uploadDocument, deleteDocument, fetchUsers, fetchPreCallPlans, fetchAvatars, fetchGuardrails, fetchCategories, fetchRolePlays } from "../api/apiService";
-import { getOrganizationName, getAvatarName,getCategoryName,getSubCategoryName,getUserName , formatToLongDate, formatFileSize, handleView, handleDownload} from "../lib/lookupUtils";
+import { fetchDocuments, fetchOrganizations, uploadDocument, deleteDocument, fetchUsers, fetchPreCallPlans, fetchAvatars, fetchGuardrails, fetchCategories, fetchRolePlays, addRoleplay, editRoleplay, deleteRoleplay } from "../api/apiService";
+import { getOrganizationName, getAvatarName, getCategoryName, getSubCategoryName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { add } from "date-fns";
 
 interface Document {
   id: number;
@@ -33,14 +34,278 @@ interface Document {
 interface RolePlay {
   id: number;
   name: string;
-  organization: string;
-  avatar: string;
-  preCallPlan: string;
-  category: string;
-  subcategory: string;
-  guardrail: string;
-  documents: number[];
+  organization_id: string;
+  category_id: string;
+  subcategory_id: string;
+  avatar_id: string;
+  precall_plan_id: string;
+  guardrail_id: string;
+  document_id: string;
+  is_active: boolean;
 }
+
+interface RolePlaysFormProps {
+  isEdit?: boolean;
+  roleplayName: string;
+  setRoleplayName: React.Dispatch<React.SetStateAction<string>>;
+
+  selectedOrganization: string;
+  setSelectedOrganization: React.Dispatch<React.SetStateAction<string>>;
+
+  selectedCategory: string;
+  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
+
+  selectedSubcategory: string;
+  setSelectedSubcategory: React.Dispatch<React.SetStateAction<string>>;
+
+  selectedPreCallPlans: string;
+  setSelectedPreCallPlans: React.Dispatch<React.SetStateAction<string>>;
+
+  selectedAvatars: string;
+  setSelectedAvatars: React.Dispatch<React.SetStateAction<string>>;
+
+  selectedGuardrails: string;
+  setSelectedGuardrails: React.Dispatch<React.SetStateAction<string>>;
+
+  selectedDocument: string;
+  setSelectedDocument: React.Dispatch<React.SetStateAction<string>>;
+
+  isActive: boolean;
+  setIsActive: React.Dispatch<React.SetStateAction<boolean>>;
+
+  organizations: any[];
+  categories: any[];
+  subcategories: any[];
+  prePlans: any[];
+  avatars: any[];
+  guardrails: any[];
+  filteredDocuments: any[];
+}
+
+const RolePlaysForm = ({
+  isEdit = false,
+  roleplayName,
+  setRoleplayName,
+  selectedOrganization,
+  setSelectedOrganization,
+  selectedCategory,
+  setSelectedCategory,
+  selectedSubcategory,
+  setSelectedSubcategory,
+  selectedPreCallPlans,
+  setSelectedPreCallPlans,
+  selectedAvatars,
+  setSelectedAvatars,
+  selectedGuardrails,
+  setSelectedGuardrails,
+  selectedDocument,
+  setSelectedDocument,
+  isActive,
+  setIsActive,
+  organizations,
+  categories,
+  subcategories,
+  prePlans,
+  avatars,
+  guardrails,
+  filteredDocuments,
+}: RolePlaysFormProps) => (
+  <div className="space-y-6 py-6">
+    {/* Organization */}
+    <div className="space-y-2">
+      <Label htmlFor="organization">
+        Organization <span className="text-destructive">*</span>
+      </Label>
+      <Select
+        value={selectedOrganization}
+        onValueChange={(value) => {
+          setSelectedOrganization(value);
+          setSelectedDocument("");
+        }}
+      >
+        <SelectTrigger className="h-11 bg-background border-border/50">
+          <SelectValue placeholder="Select organization" />
+        </SelectTrigger>
+        <SelectContent className="bg-background z-50">
+          {organizations.map((org) => (
+            <SelectItem key={org?.id} value={org?.id}>
+              {org.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Roleplay Name */}
+    <div className="space-y-2">
+      <Label htmlFor="roleplayName">
+        Roleplay Name <span className="text-destructive">*</span>
+      </Label>
+      <Input
+        id="roleplayName"
+        placeholder="Enter roleplay name"
+        value={roleplayName}
+        onChange={(e) => setRoleplayName(e.target.value)}
+        className="h-11 bg-background border-border/50"
+      />
+    </div>
+
+    {/* Active Status */}
+    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+      <div className="space-y-0.5">
+        <Label htmlFor="active-status" className="text-sm font-medium">
+          Status
+        </Label>
+        <p className="text-xs text-muted-foreground">{isActive ? "Roleplay is active" : "Roleplay is inactive"}</p>
+      </div>
+      <Switch id="active-status" checked={isActive} onCheckedChange={setIsActive} />
+    </div>
+
+    {/* Category */}
+    <div className="space-y-2">
+      <Label htmlFor="category">
+        Category <span className="text-destructive">*</span>
+      </Label>
+      <Select
+        value={selectedCategory}
+        onValueChange={(value) => {
+          setSelectedCategory(value);
+          setSelectedSubcategory("");
+        }}
+      >
+        <SelectTrigger className="h-11 bg-background border-border/50">
+          <SelectValue placeholder="Select category" />
+        </SelectTrigger>
+        <SelectContent className="bg-background z-50">
+          {categories.map((cat: any) => (
+            <SelectItem key={cat?.id} value={cat?.id}>
+              {cat?.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Subcategory */}
+    <div className="space-y-2">
+      <Label htmlFor="subcategory">
+        Subcategory <span className="text-destructive">*</span>
+      </Label>
+      <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory} disabled={!selectedCategory}>
+        <SelectTrigger className="h-11 bg-background border-border/50">
+          <SelectValue placeholder={selectedCategory ? "Select subcategory" : "Select category first"} />
+        </SelectTrigger>
+        <SelectContent className="bg-background z-50">
+          {subcategories.map((sub) => (
+            <SelectItem key={sub?.id} value={sub?.id}>
+              {sub?.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Pre-Call Plan */}
+    <div className="space-y-2">
+      <Label htmlFor="prePlan">
+        Pre-Call Plan <span className="text-destructive">*</span>
+      </Label>
+      <Select value={selectedPreCallPlans}
+        onValueChange={(value) => {
+          setSelectedPreCallPlans(value);
+        }}>
+        <SelectTrigger className="h-11 bg-background border-border/50">
+          <SelectValue placeholder="Select pre-call plan" />
+        </SelectTrigger>
+        <SelectContent className="bg-background z-50">
+          {prePlans.map((plan) => (
+            <SelectItem key={plan?.id} value={plan?.id}>
+              {plan?.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Avatar */}
+    <div className="space-y-2">
+      <Label htmlFor="avatar">
+        Avatar <span className="text-destructive">*</span>
+      </Label>
+      <Select value={selectedAvatars}
+        onValueChange={(value) => {
+          setSelectedAvatars(value);
+        }}>
+        <SelectTrigger className="h-11 bg-background border-border/50">
+          <SelectValue placeholder="Select avatar" />
+        </SelectTrigger>
+        <SelectContent className="bg-background z-50">
+          {avatars.map((avatar) => (
+            <SelectItem key={avatar?.id} value={avatar?.id}>
+              {avatar?.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Guardrails */}
+    <div className="space-y-2">
+      <Label htmlFor="guardrails">Guardrails</Label>
+      <Select value={selectedGuardrails}
+        onValueChange={(value) => {
+          setSelectedGuardrails(value);
+        }}>
+        <SelectTrigger className="h-11 bg-background border-border/50">
+          <SelectValue placeholder="Select guardrails" />
+        </SelectTrigger>
+        <SelectContent className="bg-background z-50">
+          {guardrails.map((guardrail) => (
+            <SelectItem key={guardrail?.id} value={guardrail?.id}>
+              {guardrail?.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Documents */}
+    <div className="space-y-3">
+      <Label>
+        Document <span className="text-destructive">*</span>
+      </Label>
+
+      {!selectedOrganization ? (
+        <p className="text-sm text-muted-foreground">
+          Select an organization first to see available documents
+        </p>
+      ) : filteredDocuments?.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No documents available for this organization
+        </p>
+      ) : (
+        <Select
+          value={selectedDocument}
+          onValueChange={setSelectedDocument}
+        >
+          <SelectTrigger className="h-11 bg-background border-border/50">
+            <SelectValue placeholder="Select document" />
+          </SelectTrigger>
+
+          <SelectContent className="bg-background z-50">
+            {filteredDocuments.map((doc) => (
+              <SelectItem key={doc.id} value={doc.id}>
+                {doc.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+
+  </div>
+);
+
 
 const RolePlays = () => {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -52,7 +317,7 @@ const RolePlays = () => {
   const [sessionToDelete, setSessionToDelete] = useState<RolePlay | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
   const [selectedOrganization, setSelectedOrganization] = useState<string>("");
-  const [selectedDocuments, setSelectedDocuments] = useState<any>([]);
+  const [selectedDocument, setSelectedDocument] = useState<any>("");
   const [selectedAvatars, setSelectedAvatars] = useState<string>("");
   const [selectedPreCallPlans, setSelectedPreCallPlans] = useState<string>("");
   const [selectedGuardrails, setSelectedGuardrails] = useState<string>("");
@@ -64,6 +329,7 @@ const RolePlays = () => {
   const [avatars, setAvatars] = useState<any[]>([]);
   const [guardrails, setGuardrails] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [roleplayName, setRoleplayName] = useState<string>("");
 
   // Mock documents data
   // const documents: Document[] = [
@@ -82,7 +348,7 @@ const RolePlays = () => {
   ]);
 
   // Mock data for dropdowns
- // const organizations = ["TechCorp", "ServiceHub", "DealMakers", "HealthFirst"];
+  // const organizations = ["TechCorp", "ServiceHub", "DealMakers", "HealthFirst"];
   // const prePlans = [
   //   "Enterprise Sales Strategy",
   //   "Customer Handling Protocol",
@@ -101,40 +367,53 @@ const RolePlays = () => {
   // };
 
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        await fetchRolePlays()
-          .then((roleplays) => setRolePlay(Array.isArray(roleplays) ? roleplays : []))
-          .catch(() => setRolePlay([]));
-        await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
-        await fetchDocuments()
-          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
-          .catch(() => setDocuments([]));
-        await fetchUsers()
-          .then((users) => setUsers(Array.isArray(users) ? users : []))
-          .catch(() => setUsers([]));
-        await fetchPreCallPlans()
-          .then((prePlans) => setPreCallPlans(Array.isArray(prePlans) ? prePlans : []))
-          .catch(() => setPreCallPlans([]));
-        await fetchAvatars()
-          .then((avatars) => setAvatars(Array.isArray(avatars) ? avatars : []))
-          .catch(() => setAvatars([]));
-        await fetchGuardrails()
-          .then((guardrails) => setGuardrails(Array.isArray(guardrails) ? guardrails : []))
-          .catch(() => setGuardrails([]));
-         await fetchCategories()
-          .then((categories) => setCategories(Array.isArray(categories) ? categories : []))
-          .catch(() => setCategories([]));
-      } finally {
-        setLoading(false);
-      }
+ useEffect(() => {
+  async function loadData() {
+    setLoading(true);
+    try {
+      await loadRolePlays();
+
+      const orgs = await fetchOrganizations();
+      setOrganizations(Array.isArray(orgs) ? orgs : []);
+
+      const docs = await fetchDocuments();
+      setDocuments(Array.isArray(docs) ? docs : []);
+
+      const users = await fetchUsers();
+      setUsers(Array.isArray(users) ? users : []);
+
+      const plans = await fetchPreCallPlans();
+      setPreCallPlans(Array.isArray(plans) ? plans : []);
+
+      const avatarsData = await fetchAvatars();
+      setAvatars(Array.isArray(avatarsData) ? avatarsData : []);
+
+      const guardrailsData = await fetchGuardrails();
+      setGuardrails(Array.isArray(guardrailsData) ? guardrailsData : []);
+
+      const categoriesData = await fetchCategories();
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+
+    } finally {
+      setLoading(false);
     }
-    loadData();
-  }, []);
+  }
+
+  loadData();
+}, []);
+
+const loadRolePlays = async () => {
+  try {
+    setLoading(true);
+    const data = await fetchRolePlays();
+    setRolePlay(Array.isArray(data) ? data : []);
+  } catch (error) {
+    setRolePlay([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
   // Filter documents based on selected organization
   const filteredDocuments = selectedOrganization
     ? documents.filter((doc) => doc.organization_id === selectedOrganization)
@@ -143,56 +422,119 @@ const RolePlays = () => {
   const subcategories = selectedCategory ? categories.find((cat) => cat.id === selectedCategory)?.children || [] : [];
 
   const handleDocumentToggle = (documentId: number) => {
-    setSelectedDocuments((prev) =>
+    setSelectedDocument((prev) =>
       prev.includes(documentId) ? prev.filter((id) => id !== documentId) : [...prev, documentId]
     );
   };
 
-  const handleSelectAllDocuments = () => {
-    if (selectedDocuments.length === filteredDocuments.length) {
-      setSelectedDocuments([]);
+  const handleSelectAllDocument = () => {
+    if (selectedDocument?.length === filteredDocuments?.length) {
+      setSelectedDocument("");
     } else {
-      setSelectedDocuments(filteredDocuments.map((doc) => doc.id));
+      setSelectedDocument(filteredDocuments.map((doc) => doc.id));
     }
   };
 
-  const handleCreateRolePlay = () => {
-    setIsCreateSheetOpen(false);
-    // Reset form
-    setSelectedCategory("");
-    setSelectedSubcategory("");
-    setSelectedOrganization("");
-    setSelectedDocuments([]);
-    setSelectedPreCallPlans("");
-    setSelectedAvatars("");
-    setSelectedGuardrails("");
-    setIsActive(true);
+  const handleCreateRolePlay = async () => {
+    try {
+      const payload = {
+        name: roleplayName, // ideally bind name to state
+        organization_id: selectedOrganization,
+        subcategory_id: selectedSubcategory,
+        precall_plan_id: selectedPreCallPlans,
+        avatar_id: selectedAvatars,
+        guardrail_id: selectedGuardrails,
+        document_id: selectedDocument, // if multiple allowed keep array
+        is_active: isActive,
+      };
+
+      await addRoleplay(payload);
+
+      console.log("CREATE PAYLOAD:", payload);
+
+      // await createRolePlay(payload);
+
+      toast.success("Roleplay created successfully");
+      setIsCreateSheetOpen(false);
+      // Reset form
+      setSelectedCategory("");
+      setSelectedSubcategory("");
+      setSelectedOrganization("");
+      setSelectedDocument("");
+      setSelectedPreCallPlans("");
+      setSelectedAvatars("");
+      setSelectedGuardrails("");
+      setIsActive(true);
+        await loadRolePlays();
+
+      // Reset form
+
+
+    } catch (error) {
+      toast.error("Failed to create roleplay");
+    }
+
   };
 
-  const handleEditRolePlay = (roleplay: RolePlay) => {
-    setSelectedRolePlay(roleplay);
-    setSelectedCategory(roleplay.category_id);
-    setSelectedSubcategory(roleplay.subcategory_id);
-    setSelectedOrganization(roleplay.organization_id);
-    setSelectedDocuments(roleplay.document_id || []);
-    setSelectedPreCallPlans(roleplay.precall_plan_id);
-    setSelectedAvatars(roleplay.avatar_id);
-    setSelectedGuardrails(roleplay.guardrail_id);
-    setIsActive(true);
-    setIsEditSheetOpen(true);
-  };
+ const handleEditRolePlay = (roleplay: RolePlay) => {
+  setSelectedRolePlay(roleplay);
 
-  const handleUpdateRolePlay = () => {
-    setIsEditSheetOpen(false);
+  setRoleplayName(roleplay.name);
+  setSelectedCategory(roleplay.category_id);
+  setSelectedSubcategory(roleplay.subcategory_id);
+  setSelectedOrganization(roleplay.organization_id);
+  setSelectedDocument(roleplay.document_id);
+  setSelectedPreCallPlans(roleplay.precall_plan_id);
+  setSelectedAvatars(roleplay.avatar_id);
+  setSelectedGuardrails(roleplay.guardrail_id);
+  setIsActive(roleplay.is_active);
+
+  setIsEditSheetOpen(true);
+};
+
+  const handleUpdateRolePlay = async () => {
+    console.log("Update clicked");
+  console.log("Selected Roleplay:", selectedRolePlay);
+
+  try {
+    if (!selectedRolePlay) {
+      console.log("No roleplay selected");
+      return;
+    }
+
+    const payload = {
+      name: roleplayName,
+      organization_id: selectedOrganization,
+      subcategory_id: selectedSubcategory,
+      precall_plan_id: selectedPreCallPlans,
+      avatar_id: selectedAvatars,
+      guardrail_id: selectedGuardrails,
+      document_id: selectedDocument,
+      is_active: isActive,
+    };
+
+    console.log("Update Payload:", payload);
+
+    await editRoleplay(selectedRolePlay.id, payload);
+
+     setIsEditSheetOpen(false);
     setSelectedRolePlay(null);
     setSelectedCategory("");
     setSelectedSubcategory("");
     setSelectedOrganization("");
-    setSelectedDocuments([]);
+    setSelectedDocument("");
     setSelectedPreCallPlans("");
     setSelectedAvatars("");
     setSelectedGuardrails("");
     toast.success("Roleplay updated successfully");
+    await loadRolePlays();
+
+    await loadRolePlays();
+  } catch (error) {
+    console.error("Update error:", error);
+    toast.error("Failed to update roleplay");
+  }
+   
   };
 
   const handleDeleteClick = (roleplay: RolePlay) => {
@@ -200,244 +542,30 @@ const RolePlays = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async() => {
     if (sessionToDelete) {
       setRolePlay(roleplays.filter((s) => s.id !== sessionToDelete.id));
-      toast.success("Roleplay deleted successfully");
+
+       try {
+    await deleteRoleplay(sessionToDelete.id);
+    toast.success("Roleplay deleted successfully");
+
+    // Refresh list from API
+    await loadRolePlays();
+
+  } catch (error) {
+    console.error("Delete error:", error);
+    toast.error("Failed to delete roleplay");
+  } finally {
+    setIsDeleteDialogOpen(false);
+    setSessionToDelete(null);
+  }
     }
     setIsDeleteDialogOpen(false);
     setSessionToDelete(null);
   };
 
-  const RolePlaysForm = ({ isEdit = false }: { isEdit?: boolean }) => (
-    <div className="space-y-6 py-6">
-      {/* Organization */}
-      <div className="space-y-2">
-        <Label htmlFor="organization">
-          Organization <span className="text-destructive">*</span>
-        </Label>
-        <Select
-          value={selectedOrganization}
-          onValueChange={(value) => {
-            setSelectedOrganization(value);
-            setSelectedDocuments([]);
-          }}
-        >
-          <SelectTrigger className="h-11 bg-background border-border/50">
-            <SelectValue placeholder="Select organization" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            {organizations.map((org) => (
-              <SelectItem key={org?.id} value={org?.id}>
-                {org.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
-      {/* Roleplay Name */}
-      <div className="space-y-2">
-        <Label htmlFor="sessionName">
-          Roleplay Name <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="sessionName"
-          placeholder="Enter roleplay name"
-          defaultValue={isEdit && selectedRolePlay ? selectedRolePlay.name : ""}
-          className="h-11 bg-background border-border/50"
-        />
-      </div>
-
-      {/* Active Status */}
-      <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-        <div className="space-y-0.5">
-          <Label htmlFor="active-status" className="text-sm font-medium">
-            Status
-          </Label>
-          <p className="text-xs text-muted-foreground">{isActive ? "Roleplay is active" : "Roleplay is inactive"}</p>
-        </div>
-        <Switch id="active-status" checked={isActive} onCheckedChange={setIsActive} />
-      </div>
-
-      {/* Category */}
-      <div className="space-y-2">
-        <Label htmlFor="category">
-          Category <span className="text-destructive">*</span>
-        </Label>
-        <Select
-          value={selectedCategory}
-          onValueChange={(value) => {
-            setSelectedCategory(value);
-            setSelectedSubcategory("");
-          }}
-        >
-          <SelectTrigger className="h-11 bg-background border-border/50">
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            {categories.map((cat:any) => (
-              <SelectItem key={cat?.id} value={cat?.id}>
-                {cat?.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Subcategory */}
-      <div className="space-y-2">
-        <Label htmlFor="subcategory">
-          Subcategory <span className="text-destructive">*</span>
-        </Label>
-        <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory} disabled={!selectedCategory}>
-          <SelectTrigger className="h-11 bg-background border-border/50">
-            <SelectValue placeholder={selectedCategory ? "Select subcategory" : "Select category first"} />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            {subcategories.map((sub) => (
-              <SelectItem key={sub?.id} value={sub?.id}>
-                {sub?.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Pre-Call Plan */}
-      <div className="space-y-2">
-        <Label htmlFor="prePlan">
-          Pre-Call Plan <span className="text-destructive">*</span>
-        </Label>
-        <Select value={selectedPreCallPlans}
-          onValueChange={(value) => {
-            setSelectedPreCallPlans(value);
-          }}>
-          <SelectTrigger className="h-11 bg-background border-border/50">
-            <SelectValue placeholder="Select pre-call plan" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            {prePlans.map((plan) => (
-              <SelectItem key={plan?.id} value={plan?.id}>
-                {plan?.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Avatar */}
-      <div className="space-y-2">
-        <Label htmlFor="avatar">
-          Avatar <span className="text-destructive">*</span>
-        </Label>
-        <Select value={selectedAvatars}
-          onValueChange={(value) => {
-            setSelectedAvatars(value);
-          }}>
-          <SelectTrigger className="h-11 bg-background border-border/50">
-            <SelectValue placeholder="Select avatar" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            {avatars.map((avatar) => (
-              <SelectItem key={avatar?.id} value={avatar?.id}>
-                {avatar?.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Guardrails */}
-      <div className="space-y-2">
-        <Label htmlFor="guardrails">Guardrails</Label>
-        <Select value={selectedGuardrails}
-          onValueChange={(value) => {
-            setSelectedGuardrails(value);
-          }}>
-          <SelectTrigger className="h-11 bg-background border-border/50">
-            <SelectValue placeholder="Select guardrails" />
-          </SelectTrigger>
-          <SelectContent className="bg-background z-50">
-            {guardrails.map((guardrail) => (
-              <SelectItem key={guardrail?.id} value={guardrail?.id}>
-                {guardrail?.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Documents */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label>Documents</Label>
-          {filteredDocuments.length > 0 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleSelectAllDocuments}
-            >
-              {selectedDocuments.length === filteredDocuments.length ? "Deselect All" : "Select All"}
-            </Button>
-          )}
-        </div>
-
-        {!selectedOrganization ? (
-          <p className="text-sm text-muted-foreground">Select an organization first to see available documents</p>
-        ) : filteredDocuments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No documents available for this organization</p>
-        ) : (
-          <div className="space-y-2">
-            {/* Selected Documents Display */}
-            {selectedDocuments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {selectedDocuments.map((docId) => {
-                  const doc = documents.find((d) => d.id === docId);
-                  return doc ? (
-                    <div
-                      key={docId}
-                      className="flex items-center gap-1.5 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm"
-                    >
-                      <FileText className="h-3 w-3" />
-                      <span className="max-w-[150px] truncate">{doc.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDocumentToggle(docId)}
-                        className="hover:bg-primary/20 rounded p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : null;
-                })}
-              </div>
-            )}
-
-            {/* Document List */}
-            <div className="border border-border/50 rounded-lg max-h-48 overflow-y-auto">
-              {filteredDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center gap-3 p-3 hover:bg-muted/30 cursor-pointer border-b border-border/30 last:border-b-0"
-                  onClick={() => handleDocumentToggle(doc.id)}
-                >
-                  <Checkbox
-                    checked={selectedDocuments.includes(doc.id)}
-                    onCheckedChange={() => handleDocumentToggle(doc.id)}
-                  />
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{doc.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <DashboardLayout>
@@ -533,7 +661,35 @@ const RolePlays = () => {
               <SheetTitle className="text-xl font-semibold">Add Roleplay</SheetTitle>
               <SheetDescription>Configure a new roleplay with all required parameters.</SheetDescription>
             </SheetHeader>
-            <RolePlaysForm />
+            <RolePlaysForm
+              isEdit={false}
+              roleplayName={roleplayName}
+              setRoleplayName={setRoleplayName}
+              selectedOrganization={selectedOrganization}
+              setSelectedOrganization={setSelectedOrganization}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedSubcategory={selectedSubcategory}
+              setSelectedSubcategory={setSelectedSubcategory}
+              selectedPreCallPlans={selectedPreCallPlans}
+              setSelectedPreCallPlans={setSelectedPreCallPlans}
+              selectedAvatars={selectedAvatars}
+              setSelectedAvatars={setSelectedAvatars}
+              selectedGuardrails={selectedGuardrails}
+              setSelectedGuardrails={setSelectedGuardrails}
+              selectedDocument={selectedDocument}
+              setSelectedDocument={setSelectedDocument}
+              isActive={isActive}
+              setIsActive={setIsActive}
+              organizations={organizations}
+              categories={categories}
+              subcategories={subcategories}
+              prePlans={prePlans}
+              avatars={avatars}
+              guardrails={guardrails}
+              filteredDocuments={filteredDocuments}
+            />
+
           </div>
 
           <SheetFooter className="border-t bg-background p-6 mt-auto">
@@ -557,7 +713,35 @@ const RolePlays = () => {
               <SheetTitle className="text-xl font-semibold">Edit Roleplay</SheetTitle>
               <SheetDescription>Update roleplay configuration and parameters.</SheetDescription>
             </SheetHeader>
-            <RolePlaysForm isEdit />
+            <RolePlaysForm
+              isEdit={true}
+              roleplayName={roleplayName}
+              setRoleplayName={setRoleplayName}
+              selectedOrganization={selectedOrganization}
+              setSelectedOrganization={setSelectedOrganization}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedSubcategory={selectedSubcategory}
+              setSelectedSubcategory={setSelectedSubcategory}
+              selectedPreCallPlans={selectedPreCallPlans}
+              setSelectedPreCallPlans={setSelectedPreCallPlans}
+              selectedAvatars={selectedAvatars}
+              setSelectedAvatars={setSelectedAvatars}
+              selectedGuardrails={selectedGuardrails}
+              setSelectedGuardrails={setSelectedGuardrails}
+              selectedDocument={selectedDocument}
+              setSelectedDocument={setSelectedDocument}
+              isActive={isActive}
+              setIsActive={setIsActive}
+              organizations={organizations}
+              categories={categories}
+              subcategories={subcategories}
+              prePlans={prePlans}
+              avatars={avatars}
+              guardrails={guardrails}
+              filteredDocuments={filteredDocuments}
+            />
+
           </div>
 
           <SheetFooter className="border-t bg-background p-6 mt-auto">

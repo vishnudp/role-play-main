@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,75 +41,51 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { 
-  FolderTree, 
-  Plus, 
-  MoreHorizontal, 
-  Pencil, 
-  Trash2, 
-  Search, 
-  ChevronDown, 
+import {
+  FolderTree,
+  Plus,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Search,
+  ChevronDown,
   ChevronRight,
   Layers
 } from "lucide-react";
+import { fetchCategories, addCategory, editCategory, deleteCategory, addSubCategory, editSubCategory, deleteSubCategory } from "@/api/apiService";
 
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog"; // ShadCN AlertDialog
 interface SubCategory {
   id: string;
   name: string;
   description: string;
-  status: "Active" | "Inactive";
+  is_active: "Active" | "Inactive";
 }
 
 interface Category {
   id: string;
   name: string;
   description: string;
-  status: "Active" | "Inactive";
-  subCategories: SubCategory[];
+  is_active: "Active" | "Inactive";
+  children: SubCategory[];
   createdAt: string;
 }
 
 const Categories = () => {
-  const [categories, setCategories] = useState<Category[]>([
-    {
-      id: "1",
-      name: "Sales",
-      description: "Sales related roleplay scenarios",
-      status: "Active",
-      createdAt: "2024-01-15",
-      subCategories: [
-        { id: "1-1", name: "Enterprise Sales", description: "Large enterprise deals", status: "Active" },
-        { id: "1-2", name: "Negotiation", description: "Negotiation techniques", status: "Active" },
-        { id: "1-3", name: "Cold Calling", description: "Cold outreach scenarios", status: "Active" },
-      ]
-    },
-    {
-      id: "2",
-      name: "Customer Support",
-      description: "Customer service training scenarios",
-      status: "Active",
-      createdAt: "2024-01-12",
-      subCategories: [
-        { id: "2-1", name: "Technical Support", description: "Technical troubleshooting", status: "Active" },
-        { id: "2-2", name: "Complaint Handling", description: "Managing customer complaints", status: "Active" },
-      ]
-    },
-    {
-      id: "3",
-      name: "Healthcare",
-      description: "Healthcare communication scenarios",
-      status: "Active",
-      createdAt: "2024-01-10",
-      subCategories: [
-        { id: "3-1", name: "Patient Communication", description: "Doctor-patient interactions", status: "Active" },
-        { id: "3-2", name: "Emergency Response", description: "Emergency situation handling", status: "Inactive" },
-      ]
-    },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-  
+
   // Sheet states
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
   const [isSubCategorySheetOpen, setIsSubCategorySheetOpen] = useState(false);
@@ -117,6 +93,26 @@ const Categories = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<SubCategory | null>(null);
   const [parentCategoryId, setParentCategoryId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "category" | "subCategory"; categoryId: string; subCategoryId?: string; name: string } | null>(null);
+
+  const loadCategories = async () => {
+  setLoading(true);
+  try {
+    const cats = await fetchCategories();
+    setCategories(Array.isArray(cats) ? cats : []);
+  } catch (err) {
+    setCategories([]);
+    toast.error("Failed to fetch categories");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  useEffect(() => {
+    loadCategories()
+  }, []);
 
   // Form states
   const [categoryForm, setCategoryForm] = useState({
@@ -153,42 +149,40 @@ const Categories = () => {
   };
 
   // Category handlers
-  const handleAddCategory = () => {
-    if (!categoryForm.name) {
-      toast.error("Please enter a category name");
-      return;
-    }
+  const handleAddCategory = async () => {
+   if (!categoryForm.name) return toast.error("Please enter a category name");
 
-    const newCategory: Category = {
-      id: Date.now().toString(),
+  try {
+    const newCategory = await addCategory({
       name: categoryForm.name,
       description: categoryForm.description,
-      status: categoryForm.status,
-      subCategories: [],
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setCategories([...categories, newCategory]);
+    });
+    setCategories([...categories, { ...newCategory, children: [], is_active: "Active" }]);
     resetCategoryForm();
     setIsCategorySheetOpen(false);
     toast.success("Category created successfully");
+  } catch (err) {
+    toast.error("Failed to create category");
+  }
   };
 
-  const handleEditCategory = () => {
-    if (!selectedCategory || !categoryForm.name) {
-      toast.error("Please enter a category name");
-      return;
-    }
+  
+const handleEditCategory = async () => {
+  if (!selectedCategory || !categoryForm.name) return toast.error("Please enter a category name");
 
-    setCategories(categories.map(c =>
-      c.id === selectedCategory.id
-        ? { ...c, name: categoryForm.name, description: categoryForm.description, status: categoryForm.status }
-        : c
-    ));
+  try {
+    const updated = await editCategory(selectedCategory.id, {
+      name: categoryForm.name,
+      description: categoryForm.description,
+    });
+    setCategories(categories.map(c => c.id === selectedCategory.id ? { ...c, ...updated } : c));
     resetCategoryForm();
     setIsCategorySheetOpen(false);
     toast.success("Category updated successfully");
-  };
+  } catch (err) {
+    toast.error("Failed to update category");
+  }
+};
 
   const handleDeleteCategory = (categoryId: string) => {
     setCategories(categories.filter(c => c.id !== categoryId));
@@ -200,73 +194,119 @@ const Categories = () => {
     setCategoryForm({
       name: category.name,
       description: category.description,
-      status: category.status,
+      is_active: category.is_active,
     });
     setIsEditMode(true);
     setIsCategorySheetOpen(true);
   };
 
   // SubCategory handlers
-  const handleAddSubCategory = () => {
-    if (!subCategoryForm.name || !parentCategoryId) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+  const handleAddSubCategory = async () => {
+  if (!subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
 
-    const newSubCategory: SubCategory = {
-      id: `${parentCategoryId}-${Date.now()}`,
+  try {
+    const newSub = await addSubCategory({
       name: subCategoryForm.name,
       description: subCategoryForm.description,
-      status: subCategoryForm.status,
-    };
+      parent_id: parentCategoryId,
+    });
 
     setCategories(categories.map(c =>
       c.id === parentCategoryId
-        ? { ...c, subCategories: [...c.subCategories, newSubCategory] }
+        ? { ...c, children: [...c.children, newSub] }
         : c
     ));
-    
-    // Expand the parent category to show the new subcategory
-    if (!expandedCategories.includes(parentCategoryId)) {
-      setExpandedCategories([...expandedCategories, parentCategoryId]);
-    }
-    
+
+    if (!expandedCategories.includes(parentCategoryId)) setExpandedCategories([...expandedCategories, parentCategoryId]);
+
     resetSubCategoryForm();
     setIsSubCategorySheetOpen(false);
     toast.success("Subcategory created successfully");
-  };
+  } catch (err) {
+    toast.error("Failed to create subcategory");
+  }
+};
 
-  const handleEditSubCategory = () => {
-    if (!selectedSubCategory || !subCategoryForm.name || !parentCategoryId) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+  const handleEditSubCategory = async () => {
+  if (!selectedSubCategory || !subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
+
+  try {
+    const updated = await editSubCategory(selectedSubCategory.id, {
+      name: subCategoryForm.name,
+      description: subCategoryForm.description,
+    });
 
     setCategories(categories.map(c =>
       c.id === parentCategoryId
         ? {
             ...c,
-            subCategories: c.subCategories.map(sc =>
-              sc.id === selectedSubCategory.id
-                ? { ...sc, name: subCategoryForm.name, description: subCategoryForm.description, status: subCategoryForm.status }
-                : sc
-            )
+            children: c.children.map(sc => sc.id === selectedSubCategory.id ? { ...sc, ...updated } : sc)
           }
         : c
     ));
+
     resetSubCategoryForm();
     setIsSubCategorySheetOpen(false);
     toast.success("Subcategory updated successfully");
+  } catch (err) {
+    toast.error("Failed to update subcategory");
+  }
+};
+
+  const confirmDelete = (type: "category" | "subCategory", categoryId: string, name: string, subCategoryId?: string) => {
+    setDeleteTarget({ type, categoryId, subCategoryId, name });
+    setIsDeleteDialogOpen(true);
   };
 
   const handleDeleteSubCategory = (categoryId: string, subCategoryId: string) => {
     setCategories(categories.map(c =>
       c.id === categoryId
-        ? { ...c, subCategories: c.subCategories.filter(sc => sc.id !== subCategoryId) }
+        ? { ...c, children: c.children.filter(sc => sc.id !== subCategoryId) }
         : c
     ));
     toast.success("Subcategory deleted successfully");
   };
+
+const handleConfirmDelete = async () => {
+  if (!deleteTarget) return;
+
+  setIsDeleteDialogOpen(false);
+
+  try {
+    if (deleteTarget.type === "category") {
+       await deleteCategory(deleteTarget.categoryId);
+      
+        toast.success(`Category "${deleteTarget.name}" deleted successfully`);
+        setTimeout(() => loadCategories(), 200);
+        // Remove category and remove it from expanded state
+        setCategories(prev => prev.filter(c => c.id !== deleteTarget.categoryId));
+        setExpandedCategories(prev => prev.filter(id => id !== deleteTarget.categoryId));
+        
+      
+    } else if (deleteTarget.type === "subCategory") {
+      await deleteSubCategory(deleteTarget.subCategoryId!);
+      
+        toast.success(`Subcategory "${deleteTarget.name}" deleted successfully`);
+        setCategories(prev =>
+          prev.map(c =>
+            c.id === deleteTarget.categoryId
+              ? { ...c, children: c.children.filter(sc => sc.id !== deleteTarget.subCategoryId) }
+              : c
+          )
+        );
+        setTimeout(() => loadCategories(), 200);
+      
+    }
+  } catch (err) {
+    toast.error("Failed to delete");
+  } finally {
+    setDeleteTarget(null);
+  }
+};
+
+
+
+
 
   const openEditSubCategorySheet = (category: Category, subCategory: SubCategory) => {
     setParentCategoryId(category.id);
@@ -274,7 +314,7 @@ const Categories = () => {
     setSubCategoryForm({
       name: subCategory.name,
       description: subCategory.description,
-      status: subCategory.status,
+      is_active: subCategory.is_active,
     });
     setIsEditMode(true);
     setIsSubCategorySheetOpen(true);
@@ -288,10 +328,10 @@ const Categories = () => {
 
   const filteredCategories = categories.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.subCategories.some(sc => sc.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    c.children.some(sc => sc.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const totalSubCategories = categories.reduce((acc, c) => acc + c.subCategories.length, 0);
+  const totalSubCategories = categories.reduce((acc, c) => acc + c.children.length, 0);
 
   return (
     <DashboardLayout>
@@ -418,12 +458,12 @@ const Categories = () => {
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary" className="font-normal">
-                                {category.subCategories.length} subcategories
+                                {category.children.length} subcategories
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={category.status === "Active" ? "default" : "secondary"}>
-                                {category.status}
+                              <Badge variant={category.is_active ? "default" : "secondary"}>
+                                {category.is_active ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
@@ -453,7 +493,7 @@ const Categories = () => {
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                      onClick={() => handleDeleteCategory(category.id)}
+                                      onClick={() => confirmDelete("category", category.id, category.name)}
                                     >
                                       <Trash2 className="h-4 w-4" />
                                       Delete
@@ -465,7 +505,7 @@ const Categories = () => {
                           </TableRow>
                           <CollapsibleContent asChild>
                             <>
-                              {category.subCategories.map((subCategory) => (
+                              {category.children.map((subCategory) => (
                                 <TableRow key={subCategory.id} className="bg-muted/10">
                                   <TableCell></TableCell>
                                   <TableCell>
@@ -485,8 +525,8 @@ const Categories = () => {
                                     <span className="text-sm text-muted-foreground">—</span>
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant={subCategory.status === "Active" ? "default" : "secondary"}>
-                                      {subCategory.status}
+                                    <Badge variant={subCategory.is_active ? "default" : "secondary"}>
+                                      {subCategory.is_active ? "Active" : "Inactive"}
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="text-right">
@@ -506,7 +546,7 @@ const Categories = () => {
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                           className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                          onClick={() => handleDeleteSubCategory(category.id, subCategory.id)}
+                                          onClick={() => confirmDelete("subCategory", category.id, subCategory.name, subCategory.id)}
                                         >
                                           <Trash2 className="h-4 w-4" />
                                           Delete
@@ -671,6 +711,24 @@ const Categories = () => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {deleteTarget?.type === "category"
+              ? `This will permanently delete the category "${deleteTarget.name}" and all its subcategories.`
+              : `This will permanently delete the subcategory "${deleteTarget?.name}".`}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+          <Button variant="destructive" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </DashboardLayout>
   );
 };

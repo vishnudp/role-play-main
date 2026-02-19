@@ -189,6 +189,24 @@ export async function fetchRolePlays() {
 }
 
 
+export async function addRoleplay(payload:any) {
+  const res = await apiClient.post("/role-plays", payload);
+  return res.data.data; // returns the created guardrail
+}
+
+// Edit an existing  Pre Call Plans
+export async function editRoleplay(id: any, payload: any) {
+  const res = await apiClient.put(`/role-plays/${id}`, payload);
+  return res.data.data; // returns the updated guardrail
+}
+
+// Delete a  Pre Call Plans
+export async function deleteRoleplay(id: any) {
+  const res = await apiClient.delete(`/role-plays/${id}`);
+  return res.data.data; // can return some confirmation or the deleted object
+}
+
+
 // Fetch Categories
 
 export async function fetchCategories() {
@@ -196,10 +214,44 @@ export async function fetchCategories() {
   return res.data.data;
 }
 
+export async function addCategory(payload:any) {
+  const res = await apiClient.post("/categories", payload);
+  return res.data.data; // returns the created category
+}
+
+// Edit an existing  Category
+export async function editCategory(id: any, payload: any) {
+  const res = await apiClient.put(`/categories/${id}`, payload);
+  return res.data.data; // returns the updated category
+}
+
+// Delete a  Category
+export async function deleteCategory(id: any) {
+  const res = await apiClient.delete(`/categories/${id}`);
+  return res.data.data; // can return some confirmation or the deleted object
+}
+
 // Fetch Sub Categories 
 export async function fetchSubCategories(categoryId: string) {
   const res = await apiClient.get(`/categories/${categoryId}/subcategories`);
   return res.data.data;
+}
+
+export async function addSubCategory(payload:any) {
+  const res = await apiClient.post(`/sub-categories`, payload);
+  return res.data.data; // returns the created subcategory
+}
+
+// Edit an existing  SubCategory
+export async function editSubCategory(subCategoryId: string, payload: any) {
+  const res = await apiClient.put(`/sub-categories/${subCategoryId}`, payload);
+  return res.data.data; // returns the updated subcategory
+}
+
+// Delete a  SubCategory
+export async function deleteSubCategory(subCategoryId: string) {
+  const res = await apiClient.delete(`/sub-categories/${subCategoryId}`);
+  return res.data.data; // can return some confirmation or the deleted object
 }
 
 
