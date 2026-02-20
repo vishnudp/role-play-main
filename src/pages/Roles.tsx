@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useEffect, useState } from "react";
-import { fetchOrganizations, fetchRoles } from "../api/apiService";
+import { fetchOrganizations, fetchRolePlays, fetchRoles } from "../api/apiService";
 import { fetchDocuments, fetchMetaData, uploadDocument, deleteDocument, fetchUsers, createRole, updateRoleApi, deleteRoleApi } from "../api/apiService";
 import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
 import {
@@ -62,7 +62,6 @@ const Roles = () => {
   const [addDescription, setAddDescription] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [selectedOrgId, setSelectedOrgId] = useState<string>("all");
-  
 
   useEffect(() => {
     async function loadData() {
@@ -74,6 +73,7 @@ const Roles = () => {
         await fetchRoles()
           .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
           .catch(() => setRoles([]));
+       
         await fetchMetaData()
           .then((meta) => {
             console.log("META RESPONSE:", meta); // 👈 add this

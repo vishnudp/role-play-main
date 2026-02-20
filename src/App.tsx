@@ -19,6 +19,7 @@ import Guardrails from "./pages/Guardrails";
 import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 import AvatarConfiguration from "./pages/AvatarConfigurations";
+import Certifications from "./pages/Certifications";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/documents" element={<Documents />} />
           <Route path="/guardrails" element={<Guardrails />} />
           <Route path="/categories" element={<Categories />} />
+          <Route path="/certifications" element={<Certifications />} />
           <Route path="/avatar-configuration" element={<AvatarConfiguration />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

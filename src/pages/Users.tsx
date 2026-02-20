@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { fetchOrganizations } from "../api/apiService";
-import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, fetchRoles, addUser, updateUserAPi, deleteUserApi } from "../api/apiService";
+import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, fetchRoles, addUser, updateUserAPi, deleteUserApi, fetchRolePlays } from "../api/apiService";
 import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
 import {
   AlertDialog,
@@ -62,7 +62,10 @@ const UsersPage = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-
+  const [rolePlays, setRolePlays] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterOrganization, setFilterOrganization] = useState("");
+  const [filterRole, setFilterRole] = useState("");
   // Form state for add
   const [newUser, setNewUser] = useState({
     name: "",
@@ -100,6 +103,9 @@ const UsersPage = () => {
         await fetchRoles()
           .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
           .catch(() => setRoles([]));
+        await fetchRolePlays()
+          .then((rolePlays) => setRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
+          .catch(() => setRolePlays([]));
         await fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
@@ -109,6 +115,20 @@ const UsersPage = () => {
     }
     loadData();
   }, []);
+
+  const filteredUsers = users.filter((user) => {
+    const query = searchQuery.toLowerCase();
+
+    const searchMatch =
+      user.name.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      getOrganizationName(organizations, user.parent.id).toLowerCase().includes(query);
+
+    const orgMatch = filterOrganization ? user.organization === filterOrganization : true;
+    const roleMatch = filterRole ? user.role.id === filterRole : true;
+
+    return searchMatch && orgMatch && roleMatch;
+  });
 
   const handleAddUser = async () => {
     if (!newUser.name || !newUser.email || !newUser.role || !newUser.userType) {
@@ -275,8 +295,8 @@ const UsersPage = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground font-medium">Active Sessions</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">342</p>
+                  <p className="text-sm text-muted-foreground font-medium">Active Role Plays</p>
+                  <p className="text-3xl font-bold text-foreground mt-2">{fetchRolePlays.length}</p>
                 </div>
                 <div className="p-3 bg-success/10 rounded-lg">
                   <Shield className="h-6 w-6 text-success" />
@@ -305,9 +325,10 @@ const UsersPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="relative md:col-span-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search users by name, email, or organization..." className="pl-10 h-11 bg-background border-border/50" />
+                <Input placeholder="Search users by name, email, or organization..." className="pl-10 h-11 bg-background border-border/50"
+                  value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              <Select>
+              <Select value={filterOrganization} onValueChange={setFilterOrganization}>
                 <SelectTrigger className="h-11 bg-background border-border/50">
                   <SelectValue placeholder="Filter by Organization" />
                 </SelectTrigger>
@@ -319,7 +340,7 @@ const UsersPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Select>
+              <Select value={filterRole} onValueChange={setFilterRole}>
                 <SelectTrigger className="h-11 bg-background border-border/50">
                   <SelectValue placeholder="Filter by Role" />
                 </SelectTrigger>
@@ -352,12 +373,12 @@ const UsersPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 border-2 border-border/50">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} />
+                            {/* <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} /> */}
                             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                               {user.name.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>

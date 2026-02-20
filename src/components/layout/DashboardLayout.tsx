@@ -50,6 +50,7 @@ const navigation = [
   { name: "Pre-call Plans", href: "/precall-plans", icon: ClipboardList },
   { name: "Guardrails", href: "/guardrails", icon: ShieldCheck },
   { name: "Documents", href: "/documents", icon: FileText },
+  { name: "Certifications", href: "/certifications", icon: FileText },
 ];
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
