@@ -11,42 +11,42 @@ import { toast } from "sonner";
 
 export function getOrganizationName(organizations: any[], id: string): string {
   const org = organizations.find((o) => o.id === id);
-  return org?.name || 'Unknown';
+  return org?.name || 'N/A';
 }
 
 export function getAvatarName(avatars: any[], id: string): string {
   const avatar = avatars.find((a) => a.id === id);
-  return avatar?.name || 'Unknown';
+  return avatar?.name || 'N/A';
 }
 
 export function getCategoryName(categories: any[], id: string): string {
   const category = categories.find((c) => c.id === id);
-  return category?.name || 'Unknown';
+  return category?.name || 'N/A';
 }
 
 export function getSubCategoryName(categories: any[], category_id: string, id: string): string {
   const category = categories.find((c) => c.id === category_id);
   const subcategory = category?.children?.find((sc) => sc.id === id);
-  return subcategory?.name || 'Unknown';
+  return subcategory?.name || 'N/A';
 }
 
 /**
  * Get user name by id from users array
  * @param users Array of user objects
  * @param id User id to look up
- * @returns User name or 'Unknown'
+ * @returns User name or 'N/A'
  */
 export function getUserName(users: any[], id: string): string {
   let lookupId = id;
-  let userName = 'Unknown';
+  let userName = 'N/A';
   if (lookupId) {
     try {
       const loginUser = JSON.parse(localStorage.getItem('user') || '{}');
       if(loginUser && loginUser.id && loginUser.id === lookupId) {
-        userName = loginUser.name || 'Unknown';
+        userName = loginUser.name || 'N/A';
       } else {
         const user = users.find((u) => u.id === lookupId || u.loginUserId === lookupId);
-        userName =  user?.name || 'Unknown';
+        userName =  user?.name || 'N/A';
       }
     } catch (e) {
       lookupId = undefined;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,14 +12,38 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-
+import { fetchOrganizations } from "../api/apiService";
+import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, fetchRoles, addUser, updateUserAPi, deleteUserApi } from "../api/apiService";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 interface User {
   id: string;
   name: string;
   email: string;
   organization: string;
-  role: string;
-  status: string;
+  role: {
+    "id": string,
+    "name": string,
+    "key": string,
+    "description": string,
+    "is_system": string,
+    "parent_id": string,
+    "created_at": string,
+    "updated_at": string,
+    "created_by": string | null,
+    "updated_by": string | null
+  };
+  is_active: boolean;
   userType: "Admin" | "Mobile";
   password?: string;
   loginUsername?: string;
@@ -27,59 +51,17 @@ interface User {
 
 const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      name: "Sarah Johnson",
-      email: "sarah.j@techcorp.com",
-      organization: "TechCorp",
-      role: "Super Admin",
-      status: "Active",
-      userType: "Admin"
-    },
-    {
-      id: "2",
-      name: "Mike Chen",
-      email: "mike.c@healthplus.com",
-      organization: "HealthPlus",
-      role: "Org Admin",
-      status: "Active",
-      userType: "Admin"
-    },
-    {
-      id: "3",
-      name: "Emma Wilson",
-      email: "emma.w@techcorp.com",
-      organization: "TechCorp",
-      role: "Doctor",
-      status: "Active",
-      userType: "Mobile",
-      loginUsername: "emma.wilson"
-    },
-    {
-      id: "4",
-      name: "James Brown",
-      email: "james.b@healthplus.com",
-      organization: "HealthPlus",
-      role: "Sales Rep",
-      status: "Inactive",
-      userType: "Mobile",
-      loginUsername: "james.brown"
-    },
-    {
-      id: "5",
-      name: "Lisa Anderson",
-      email: "lisa.a@techcorp.com",
-      organization: "TechCorp",
-      role: "Healthcare Worker",
-      status: "Active",
-      userType: "Mobile",
-      loginUsername: "lisa.anderson"
-    },
+
   ]);
 
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   // Form state for add
   const [newUser, setNewUser] = useState({
@@ -105,76 +87,125 @@ const UsersPage = () => {
     loginUsername: ""
   });
 
-  const handleAddUser = () => {
-    if (!newUser.name || !newUser.email || !newUser.organization || !newUser.role || !newUser.userType) {
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
+          .catch(() => setOrganizations([]));
+        await fetchDocuments()
+          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
+          .catch(() => setDocuments([]));
+        await fetchRoles()
+          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+          .catch(() => setRoles([]));
+        await fetchUsers()
+          .then((users) => setUsers(Array.isArray(users) ? users : []))
+          .catch(() => setUsers([]));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const handleAddUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.role || !newUser.userType) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    // Validate based on user type
-    if (newUser.userType === "Admin" && !newUser.password) {
-      toast.error("Password is required for Admin users");
-      return;
-    }
-    if (newUser.userType === "Mobile" && (!newUser.loginUsername || !newUser.password)) {
-      toast.error("Login Username and Password are required for Mobile users");
+    if (!newUser.password) {
+      toast.error("Password is required");
       return;
     }
 
-    const user: User = {
-      id: Date.now().toString(),
-      name: newUser.name,
-      email: newUser.email,
-      organization: newUser.organization,
-      role: newUser.role,
-      status: newUser.status,
-      userType: newUser.userType as "Admin" | "Mobile",
-      password: newUser.password,
-      loginUsername: newUser.loginUsername
-    };
+    try {
+      const payload = {
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password,
+        role_id: newUser.role,
+        role_type: newUser.userType === "Admin" ? "ADMIN" : "MOBILE",
+        parent_id: newUser.organization, // assuming org admin id
+        is_active: newUser.status === "Active"
+      };
 
-    setUsers([...users, user]);
-    setNewUser({ name: "", email: "", organization: "", role: "", status: "Active", userType: "", password: "", loginUsername: "" });
-    setIsAddSheetOpen(false);
-    toast.success("User added successfully");
+      const createdUser = await addUser(payload);
+
+      setUsers(prev => [...prev, createdUser]);
+
+      setIsAddSheetOpen(false);
+      setNewUser({
+        name: "",
+        email: "",
+        organization: "",
+        role: "",
+        status: "Active",
+        userType: "",
+        password: "",
+        loginUsername: ""
+      });
+
+      toast.success("User created successfully");
+    } catch (error) {
+      toast.error("Failed to create user");
+    }
   };
 
-  const handleEditUser = () => {
+
+  const handleEditUser = async () => {
     if (!selectedUser) return;
-    
-    if (!editUser.name || !editUser.email || !editUser.organization || !editUser.role || !editUser.userType) {
-      toast.error("Please fill in all required fields");
+
+    if (!editUser.name || !editUser.email || !editUser.role || !editUser.userType) {
+      toast.error("Please fill in required fields");
       return;
     }
 
-    // Validate based on user type
-    if (editUser.userType === "Admin" && !editUser.password) {
-      toast.error("Password is required for Admin users");
-      return;
-    }
-    if (editUser.userType === "Mobile" && (!editUser.loginUsername || !editUser.password)) {
-      toast.error("Login Username and Password are required for Mobile users");
-      return;
-    }
+    try {
+      const payload: any = {
+        name: editUser.name,
+        email: editUser.email,
+        role_id: editUser.role,
+        role_type: editUser.userType === "Admin" ? "ADMIN" : "MOBILE",
+        parent_id: editUser.organization,
+        is_active: editUser.status === "Active"
+      };
 
-    setUsers(users.map(u => 
-      u.id === selectedUser.id 
-        ? { 
-            ...u, 
-            name: editUser.name,
-            email: editUser.email,
-            organization: editUser.organization,
-            role: editUser.role,
-            status: editUser.status,
-            userType: editUser.userType as "Admin" | "Mobile",
-            password: editUser.password,
-            loginUsername: editUser.loginUsername
-          }
-        : u
-    ));
-    setIsEditSheetOpen(false);
-    setSelectedUser(null);
-    toast.success("User updated successfully");
+      if (editUser.password) {
+        payload.password = editUser.password;
+      }
+
+      const updatedUser = await updateUserAPi(selectedUser.id, payload);
+
+      setUsers(prev =>
+        prev.map(u => (u.id === selectedUser.id ? updatedUser : u))
+      );
+
+      setIsEditSheetOpen(false);
+      setSelectedUser(null);
+
+      toast.success("User updated successfully");
+    } catch (error) {
+      toast.error("Failed to update user");
+    }
+  };
+
+
+  const handleDeleteUser = async () => {
+    if (!deleteUserId) return;
+
+    try {
+      await deleteUserApi(deleteUserId);
+
+      setUsers(prev => prev.filter(u => u.id !== deleteUserId));
+      setDeleteUserId(null);
+
+      toast.success("User deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete user");
+    }
   };
 
   const openEditSheet = (user: User) => {
@@ -182,12 +213,12 @@ const UsersPage = () => {
     setEditUser({
       name: user.name,
       email: user.email,
-      organization: user.organization,
-      role: user.role,
-      status: user.status,
-      userType: user.userType,
-      password: user.password || "",
-      loginUsername: user.loginUsername || ""
+      organization: user.organization_id || "",
+      role: user.role_id || "",
+      status: user.is_active ? "Active" : "Inactive",
+      userType: user.role_type === "ADMIN" ? "Admin" : "Mobile",
+      loginUsername: user.email || "",  // ✅ map email
+      password: "" // ✅ NEVER populate hashed password
     });
     setIsEditSheetOpen(true);
   };
@@ -198,8 +229,8 @@ const UsersPage = () => {
     return "outline";
   };
 
-  const organizations = ["TechCorp", "HealthPlus", "MediCare", "PharmaCo"];
-  const roles = ["Super Admin", "Org Admin", "Doctor", "Sales Rep", "Healthcare Worker", "Trainer", "Evaluator"];
+  // const organizations = ["TechCorp", "HealthPlus", "MediCare", "PharmaCo"];
+  // const roles = ["Super Admin", "Org Admin", "Doctor", "Sales Rep", "Healthcare Worker", "Trainer", "Evaluator"];
 
   return (
     <DashboardLayout>
@@ -211,11 +242,11 @@ const UsersPage = () => {
             <p className="text-muted-foreground mt-2">Manage users, roles, and permissions across organizations</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="h-11 border-border/50">
+            {/* <Button variant="outline" className="h-11 border-border/50">
               <Upload className="h-4 w-4 mr-2" />
               Bulk Upload
-            </Button>
-            <Button 
+            </Button> */}
+            <Button
               className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
               onClick={() => setIsAddSheetOpen(true)}
             >
@@ -258,7 +289,7 @@ const UsersPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground font-medium">Organizations</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">24</p>
+                  <p className="text-3xl font-bold text-foreground mt-2">{organizations.length}</p>
                 </div>
                 <div className="p-3 bg-accent/10 rounded-lg">
                   <Building2 className="h-6 w-6 text-accent" />
@@ -281,9 +312,11 @@ const UsersPage = () => {
                   <SelectValue placeholder="Filter by Organization" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  <SelectItem value="techcorp">TechCorp</SelectItem>
-                  <SelectItem value="healthplus">HealthPlus</SelectItem>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select>
@@ -292,9 +325,11 @@ const UsersPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="doctor">Doctor</SelectItem>
-                  <SelectItem value="sales">Sales Rep</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -339,29 +374,29 @@ const UsersPage = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-1.5 text-sm">
                           <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="font-medium text-foreground">{user.organization}</span>
+                          <span className="font-medium text-foreground">{user?.organization}</span>
                         </div>
                       </td>
                       <td className="p-4">
                         <Badge variant="outline" className="font-normal">
-                          {user.role === "Super Admin" || user.role === "Org Admin" ? "Admin" : "Mobile App"}
+                          {user.role_type === "Super Admin" || user.role_type === "Org Admin" ? "Admin" : "Mobile App"}
                         </Badge>
                       </td>
                       <td className="p-4">
-                        <Badge variant={getRoleBadgeVariant(user.role)}>
-                          {user.role}
+                        <Badge variant={getRoleBadgeVariant(user.role_type)}>
+                          {user.role_type}
                         </Badge>
                       </td>
                       <td className="p-4">
-                        <Badge variant={user.status === "Active" ? "default" : "secondary"} className="font-normal">
-                          {user.status}
+                        <Badge variant={user.is_active ? "default" : "secondary"} className="font-normal">
+                          {user.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="h-8 text-xs hover:bg-primary/10 hover:text-primary"
                             onClick={() => openEditSheet(user)}
                           >
@@ -374,10 +409,42 @@ const UsersPage = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>View Profile</DropdownMenuItem>
+                              {/* <DropdownMenuItem>View Profile</DropdownMenuItem>
                               <DropdownMenuItem>Change Role</DropdownMenuItem>
-                              <DropdownMenuItem>Reset Password</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">Deactivate</DropdownMenuItem>
+                              <DropdownMenuItem>Reset Password</DropdownMenuItem> */}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      setDeleteUserId(user.id);
+                                    }}
+                                    className="text-destructive"
+                                  >
+                                    Delete
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will permanently delete the user.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleDeleteUser}
+                                      className="bg-destructive text-white hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -444,7 +511,7 @@ const UsersPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {organizations.map((org) => (
-                    <SelectItem key={org} value={org}>{org}</SelectItem>
+                    <SelectItem key={org?.id} value={org?.id}>{org?.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -460,7 +527,7 @@ const UsersPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
-                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                    <SelectItem key={role?.id} value={role?.id}>{role?.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -571,7 +638,7 @@ const UsersPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {organizations.map((org) => (
-                    <SelectItem key={org} value={org}>{org}</SelectItem>
+                    <SelectItem key={org?.id} value={org?.id}>{org?.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -587,7 +654,7 @@ const UsersPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
-                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                    <SelectItem key={role?.id} value={role?.id}>{role?.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

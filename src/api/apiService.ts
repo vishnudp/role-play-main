@@ -6,6 +6,11 @@ export async function fetchOrganizations() {
   return res.data.data;
 }
 
+export async function fetchRoles() {
+  const res = await apiClient.get('/roles');
+  return res.data.data;
+}
+
 export async function addOrganizations(payload:any) {
   const res = await apiClient.post("/organizations", payload);
   return res.data.data; // returns the created Organizations
@@ -272,7 +277,42 @@ export async function deleteSubCategory(subCategoryId: string) {
 }
 
 
+export async function addUser(payload:any) {
+  const res = await apiClient.post(`/users`, payload);
+  return res.data.data; // returns the created User
+}
 
+// Edit an existing  User
+export async function updateUserAPi(UserId: string, payload: any) {
+  const res = await apiClient.put(`/users/${UserId}`, payload);
+  return res.data.data; // returns the updated User
+}
+
+// Delete a  User
+export async function deleteUserApi(UserId: string) {
+  const res = await apiClient.delete(`/users/${UserId}`);
+  return res.data.data; // can return some confirmation or the deleted object
+}
+
+// Create Role
+export async function createRole(payload: any) {
+  const res = await apiClient.post("/roles", payload);
+  return res.data.data; // returns the created role
+}
+
+
+
+// Edit Role
+export async function updateRoleApi(RoleId: any, payload: any) {
+  const res = await apiClient.put(`/roles/${RoleId}`, payload);
+  return res.data.data; // returns the updated role
+}
+
+// Delete Role
+export async function deleteRoleApi(RoleId: any) {
+  const res = await apiClient.delete(`/roles/${RoleId}`);
+  return res.data.data; // can return some confirmation or the deleted object
+}
 
 
 
