@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fetchOrganizations } from "../api/apiService";
 import { fetchAvatarConfigurations, uploadAvatarConfiguration, deleteAvatarConfiguration, fetchUsers } from "../api/apiService";
-import { getOrganizationName, getUserName , formatToLongDate, formatFileSize, handleView, handleDownload} from "../lib/lookupUtils";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
 import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File, Eye } from "lucide-react";
 
 
@@ -84,11 +84,11 @@ const AvatarConfigurations = () => {
     loadData();
   }, []);
 
-  console.log('avatarConfigurations--',avatarConfigurations)
+  console.log('avatarConfigurations--', avatarConfigurations)
   const filteredAvatarConfigurations = avatarConfigurations.filter((doc) => {
     const matchesSearch = doc.avatar_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.photo?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch ;
+    return matchesSearch;
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,17 +103,17 @@ const AvatarConfigurations = () => {
   };
 
   const handleUpload = async () => {
-    
+
     if (!documentName || !selectedFile || (!isSuperAdmin)) return;
-   
-      const formData = new FormData();
+
+    const formData = new FormData();
     formData.append("avatar_name", documentName); // Avatar name input
     formData.append("avatar_id", avatarId);       // Avatar ID input
     formData.append("status", "ACTIVE");          // Default status
-    formData.append("photo", selectedFile); 
+    formData.append("photo", selectedFile);
     try {
       await uploadAvatarConfiguration(
-formData);
+        formData);
       toast.success("Avatar configuration uploaded successfully!");
       await reloadAvatarConfigurations();
       resetForm();
@@ -138,13 +138,13 @@ formData);
   };
 
   const resetForm = () => {
-  setDocumentName("");
-  setAvatarId(""); // reset avatar id too
-  setSelectedFile(null);
-  if (fileInputRef.current) {
-    fileInputRef.current.value = "";
-  }
-};
+    setDocumentName("");
+    setAvatarId(""); // reset avatar id too
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const getFileIcon = (type: string) => {
     return <FileText className="h-4 w-4 text-primary" />;
@@ -180,7 +180,7 @@ formData);
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              
+
             </div>
           </CardContent>
         </Card>
@@ -194,90 +194,109 @@ formData);
           </CardHeader>
           <CardContent>
             <div className="rounded-md border border-border/50">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="font-medium">Avatar Name</TableHead>
-                    <TableHead className="font-medium">Avatar Id</TableHead>
-                    <TableHead className="font-medium">Avatar</TableHead>
-                    <TableHead className="font-medium text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAvatarConfigurations.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-12 text-muted-foreground">
-                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                        <p>No avatar configurations found</p>
-                      </TableCell>
+              {loading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                    <p className="text-sm text-muted-foreground">Loading avatar configurations...</p>
+                  </div>
+                </div>
+              ) :
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead className="font-medium">Avatar Name</TableHead>
+                      <TableHead className="font-medium">Avatar Id</TableHead>
+                      <TableHead className="font-medium">Avatar</TableHead>
+                      <TableHead className="font-medium text-right">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredAvatarConfigurations.map((doc) => (
-                      <TableRow key={doc.id} className="group">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                              {getFileIcon(doc.type)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">{doc.avatar_name}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{doc.avatar_id}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            <img
-                    src={`http://13.51.242.38:4000/${doc.photo}`}
-                    alt={doc.avatar_name}
-                    className="w-8 h-8 rounded-full object-cover"
-                    crossOrigin="anonymous"
-                  />
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
-                                <Eye className="h-4 w-4" />
-                                View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAvatarConfigurations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-12 text-muted-foreground">
+                          <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No avatar configurations found</p>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      filteredAvatarConfigurations.map((doc) => (
+                        <TableRow key={doc.id} className="group">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                {getFileIcon(doc.type)}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{doc.avatar_name}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{doc.avatar_id}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="font-normal">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
+                                {doc?.photo ? (
+                                  <img
+                                    src={`http://13.51.242.38:4000/${doc.photo}`}
+                                    alt={doc.avatar_name}
+                                    className="w-full h-full object-cover"
+                                    crossOrigin="anonymous"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-xs font-semibold text-gray-500 leading-none">
+                                    {doc?.avatar_name?.charAt(0)?.toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
+                                  <Eye className="h-4 w-4" />
+                                  View
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                  onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>}
             </div>
           </CardContent>
         </Card>
-      {/* Delete Confirmation Dialog (now outside map) */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Avatar Configuration</DialogTitle>
-          </DialogHeader>
-          <p>Are you sure you want to delete <b>{docToDelete?.name}</b>?</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Delete Confirmation Dialog (now outside map) */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Avatar Configuration</DialogTitle>
+            </DialogHeader>
+            <p>Are you sure you want to delete <b>{docToDelete?.name}</b>?</p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Upload Document Sheet */}
@@ -294,7 +313,7 @@ formData);
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto space-y-6 py-6">
-            
+
 
             <div className="space-y-2">
               <Label htmlFor="docName">Avatar Name <span className="text-destructive">*</span></Label>
@@ -305,21 +324,21 @@ formData);
                 onChange={(e) => setDocumentName(e.target.value)}
               />
             </div>
-            
+
             <div className="space-y-2">
-  <Label htmlFor="avatarId">Avatar Id <span className="text-destructive">*</span></Label>
-  <Input
-    id="avatarId"
-    placeholder="Enter avatar id"
-    value={avatarId}
-    onChange={(e) => setAvatarId(e.target.value)}
-  />
-</div>
+              <Label htmlFor="avatarId">Avatar Id <span className="text-destructive">*</span></Label>
+              <Input
+                id="avatarId"
+                placeholder="Enter avatar id"
+                value={avatarId}
+                onChange={(e) => setAvatarId(e.target.value)}
+              />
+            </div>
 
 
             <div className="space-y-2">
               <Label>File <span className="text-destructive">*</span></Label>
-              <div 
+              <div
                 className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -362,12 +381,12 @@ formData);
             }}>
               Cancel
             </Button>
-           <Button 
-  onClick={handleUpload}
-  disabled={!documentName || !avatarId || !selectedFile} // simple check
->
-  Upload Avatar Configuration
-</Button>
+            <Button
+              onClick={handleUpload}
+              disabled={!documentName || !avatarId || !selectedFile} // simple check
+            >
+              Upload Avatar Configuration
+            </Button>
 
           </SheetFooter>
         </SheetContent>

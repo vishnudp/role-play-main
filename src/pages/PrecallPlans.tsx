@@ -202,101 +202,101 @@ const PrecallPlans = () => {
     }
   };
 
-const handleAddQuestion = () => {
-  if (!newQuestion.question.trim() || !newQuestion.answer.trim()) return;
+  const handleAddQuestion = () => {
+    if (!newQuestion.question.trim() || !newQuestion.answer.trim()) return;
 
-  const localQuestion = {
-    ...newQuestion,
-    id: Date.now(), // temporary ID for local-only questions
-    isNew: true,    // mark it as newly added
+    const localQuestion = {
+      ...newQuestion,
+      id: Date.now(), // temporary ID for local-only questions
+      isNew: true,    // mark it as newly added
+    };
+
+    setQuestions([...questions, localQuestion]);
+
+    // Reset form
+    setNewQuestion({ question: "", answer: "", hint: "", question_type: "Open-ended" });
   };
 
-  setQuestions([...questions, localQuestion]);
-
-  // Reset form
-  setNewQuestion({ question: "", answer: "", hint: "", question_type: "Open-ended" });
-};
 
 
 
 
+  const handleRemoveQuestion = async (question: Question) => {
+    if (!confirm("Are you sure you want to delete this question?")) return;
 
-const handleRemoveQuestion = async (question: Question) => {
-  if (!confirm("Are you sure you want to delete this question?")) return;
-
-  try {
-    // Call API only if question exists
-    if (!question.isNew && selectedPlan) {
-      await deletePreCallPlans(selectedPlan.id, question.id);
-    }
-
-    // Updated questions array
-    const updatedQuestions = questions.filter((q) => q.id !== question.id);
-
-    // Update local questions state
-    setQuestions(updatedQuestions);
-
-    // Update selectedPlan state
-    setSelectedPlan((prev) =>
-      prev ? { ...prev, questions: [...updatedQuestions] } : prev
-    );
-
-    // Update plans array immutably
-    setPlans((prevPlans) =>
-      prevPlans.map((plan) =>
-        plan.id === selectedPlan?.id
-          ? { ...plan, questions: [...updatedQuestions] } // new array reference
-          : plan
-      )
-    );
-     // Refresh plans list
-    const refreshedPlans = await fetchPreCallPlans();
-    setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
-
-    toast.success("Question deleted successfully!");
-  } catch {
-    toast.error("Failed to delete question.");
-  }
-};
-
-
-
-
-const handleSaveQuestions = async () => {
-  if (!selectedPlan) return;
-
-  try {
-    // Loop through all questions and call API
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
-
-      const payload = {
-        question_number: i + 1,
-        question: q.question,
-        question_type: q.question_type.replace(/\s/g, "_"), // e.g., "Open-ended" → "Open_ended"
-        answer: q.answer,
-        hint: q.hint || "",
-      };
-
-      // Decide whether to add or edit based on ID (temporary IDs are > 1e12)
-      if (q.id < 1_000_000_000_000) {
-        await editPreCallPlansQuestions(payload, selectedPlan.id, q.id);
-      } else {
-        await addPreCallPlansQuestions(payload, selectedPlan.id);
+    try {
+      // Call API only if question exists
+      if (!question.isNew && selectedPlan) {
+        await deletePreCallPlans(selectedPlan.id, question.id);
       }
+
+      // Updated questions array
+      const updatedQuestions = questions.filter((q) => q.id !== question.id);
+
+      // Update local questions state
+      setQuestions(updatedQuestions);
+
+      // Update selectedPlan state
+      setSelectedPlan((prev) =>
+        prev ? { ...prev, questions: [...updatedQuestions] } : prev
+      );
+
+      // Update plans array immutably
+      setPlans((prevPlans) =>
+        prevPlans.map((plan) =>
+          plan.id === selectedPlan?.id
+            ? { ...plan, questions: [...updatedQuestions] } // new array reference
+            : plan
+        )
+      );
+      // Refresh plans list
+      const refreshedPlans = await fetchPreCallPlans();
+      setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
+
+      toast.success("Question deleted successfully!");
+    } catch {
+      toast.error("Failed to delete question.");
     }
+  };
 
-    // Refresh plans list
-    const refreshedPlans = await fetchPreCallPlans();
-    setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
 
-    setIsQuestionsSheetOpen(false);
-    setSelectedPlan(null);
-    toast.success("All questions saved successfully!");
-  } catch {
-    toast.error("Failed to save questions.");
-  }
-};
+
+
+  const handleSaveQuestions = async () => {
+    if (!selectedPlan) return;
+
+    try {
+      // Loop through all questions and call API
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+
+        const payload = {
+          question_number: i + 1,
+          question: q.question,
+          question_type: q.question_type.replace(/\s/g, "_"), // e.g., "Open-ended" → "Open_ended"
+          answer: q.answer,
+          hint: q.hint || "",
+        };
+
+        // Decide whether to add or edit based on ID (temporary IDs are > 1e12)
+        if (q.id < 1_000_000_000_000) {
+          await editPreCallPlansQuestions(payload, selectedPlan.id, q.id);
+        } else {
+          await addPreCallPlansQuestions(payload, selectedPlan.id);
+        }
+      }
+
+      // Refresh plans list
+      const refreshedPlans = await fetchPreCallPlans();
+      setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
+
+      setIsQuestionsSheetOpen(false);
+      setSelectedPlan(null);
+      toast.success("All questions saved successfully!");
+    } catch {
+      toast.error("Failed to save questions.");
+    }
+  };
 
 
   const handleOpenAddSheet = () => {
@@ -367,68 +367,77 @@ const handleSaveQuestions = async () => {
         {/* Plans List */}
         <Card className="border-border/50 shadow-sm">
           <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="font-semibold">Plan Name</TableHead>
-                  <TableHead className="font-semibold">Organization</TableHead>
-                  <TableHead className="font-semibold">Questions</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPlans.map((plan: any) => (
-                  <TableRow key={plan.id} className="border-border/50 hover:bg-muted/30">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <p className="font-semibold text-foreground">{plan.name}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{getOrganizationName(organizations, plan.organization_id)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <HelpCircle className="h-3.5 w-3.5" />
-                        {plan.questions.length}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={plan.is_active === "Active" ? "default" : "secondary"}>
-                        {plan.is_active === "Active" ? "default" : "secondary"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end flex-wrap">
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewPlan(plan)}>
-                          <Eye className="h-3.5 w-3.5 mr-1.5" />
-                          View
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleManageQuestions(plan)}>
-                          <ListChecks className="h-3.5 w-3.5 mr-1.5" />
-                          Questions
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditPlan(plan)}>
-                          <Edit className="h-3.5 w-3.5 mr-1.5" />
-                          Edit
-                        </Button>
-                        {isSuperAdmin && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDeletePlan(plan)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                            Delete
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                  <p className="text-sm text-muted-foreground">Loading pre-call plans...</p>
+                </div>
+              </div>
+            ) :
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="font-semibold">Plan Name</TableHead>
+                    <TableHead className="font-semibold">Organization</TableHead>
+                    <TableHead className="font-semibold">Questions</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredPlans.map((plan: any) => (
+                    <TableRow key={plan.id} className="border-border/50 hover:bg-muted/30">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <p className="font-semibold text-foreground">{plan.name}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{getOrganizationName(organizations, plan.organization_id)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <HelpCircle className="h-3.5 w-3.5" />
+                          {plan.questions.length}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={plan.is_active === "Active" ? "default" : "secondary"}>
+                          {plan.is_active === "Active" ? "default" : "secondary"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end flex-wrap">
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewPlan(plan)}>
+                            <Eye className="h-3.5 w-3.5 mr-1.5" />
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleManageQuestions(plan)}>
+                            <ListChecks className="h-3.5 w-3.5 mr-1.5" />
+                            Questions
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditPlan(plan)}>
+                            <Edit className="h-3.5 w-3.5 mr-1.5" />
+                            Edit
+                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeletePlan(plan)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            }
           </CardContent>
         </Card>
 
@@ -715,103 +724,103 @@ const handleSaveQuestions = async () => {
 
         {/* Edit Question Sheet */}
         {/* Edit Question Sheet */}
-{editingQuestion && (
-  <Sheet
-    open={!!editingQuestion}
-    onOpenChange={() => setEditingQuestion(null)}
-  >
-    <SheetContent side="right" className="w-full sm:max-w-md p-6 flex flex-col">
-      <SheetHeader>
-        <SheetTitle>Edit Question</SheetTitle>
-      </SheetHeader>
+        {editingQuestion && (
+          <Sheet
+            open={!!editingQuestion}
+            onOpenChange={() => setEditingQuestion(null)}
+          >
+            <SheetContent side="right" className="w-full sm:max-w-md p-6 flex flex-col">
+              <SheetHeader>
+                <SheetTitle>Edit Question</SheetTitle>
+              </SheetHeader>
 
-      {/* Question Form */}
-      <div className="space-y-4">
-        <Input
-          placeholder="Question"
-          value={editingQuestion.question}
-          onChange={(e) =>
-            setEditingQuestion({ ...editingQuestion, question: e.target.value })
-          }
-        />
-        <Select
-          value={editingQuestion.question_type}
-          onValueChange={(value) =>
-            setEditingQuestion({ ...editingQuestion, question_type: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {questionTypes.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Textarea
-          placeholder="Answer"
-          value={editingQuestion.answer}
-          onChange={(e) =>
-            setEditingQuestion({ ...editingQuestion, answer: e.target.value })
-          }
-        />
-        <Input
-          placeholder="Hint"
-          value={editingQuestion.hint}
-          onChange={(e) =>
-            setEditingQuestion({ ...editingQuestion, hint: e.target.value })
-          }
-        />
-      </div>
+              {/* Question Form */}
+              <div className="space-y-4">
+                <Input
+                  placeholder="Question"
+                  value={editingQuestion.question}
+                  onChange={(e) =>
+                    setEditingQuestion({ ...editingQuestion, question: e.target.value })
+                  }
+                />
+                <Select
+                  value={editingQuestion.question_type}
+                  onValueChange={(value) =>
+                    setEditingQuestion({ ...editingQuestion, question_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {questionTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Textarea
+                  placeholder="Answer"
+                  value={editingQuestion.answer}
+                  onChange={(e) =>
+                    setEditingQuestion({ ...editingQuestion, answer: e.target.value })
+                  }
+                />
+                <Input
+                  placeholder="Hint"
+                  value={editingQuestion.hint}
+                  onChange={(e) =>
+                    setEditingQuestion({ ...editingQuestion, hint: e.target.value })
+                  }
+                />
+              </div>
 
-      {/* Save / Cancel buttons */}
-      <SheetFooter className="mt-auto flex gap-2">
-        <Button variant="outline" onClick={() => setEditingQuestion(null)}>
-          Cancel
-        </Button>
+              {/* Save / Cancel buttons */}
+              <SheetFooter className="mt-auto flex gap-2">
+                <Button variant="outline" onClick={() => setEditingQuestion(null)}>
+                  Cancel
+                </Button>
 
-        {/* <-- THIS IS WHERE YOUR BUTTON HANDLER GOES --> */}
-        <Button
-          onClick={async () => {
-            if (!selectedPlan || !editingQuestion) return;
+                {/* <-- THIS IS WHERE YOUR BUTTON HANDLER GOES --> */}
+                <Button
+                  onClick={async () => {
+                    if (!selectedPlan || !editingQuestion) return;
 
-            const payload = {
-              question_number: questions.findIndex(q => q.id === editingQuestion.id) + 1,
-              question: editingQuestion.question,
-              question_type: editingQuestion.question_type.replace(/\s/g, "_"),
-              answer: editingQuestion.answer,
-              hint: editingQuestion.hint || "",
-            };
+                    const payload = {
+                      question_number: questions.findIndex(q => q.id === editingQuestion.id) + 1,
+                      question: editingQuestion.question,
+                      question_type: editingQuestion.question_type.replace(/\s/g, "_"),
+                      answer: editingQuestion.answer,
+                      hint: editingQuestion.hint || "",
+                    };
 
-            try {
-              // Call API only if question exists in backend
-              if (!editingQuestion.isNew) {
-                await editPreCallPlans(selectedPlan.id, payload);
-              }
+                    try {
+                      // Call API only if question exists in backend
+                      if (!editingQuestion.isNew) {
+                        await editPreCallPlans(selectedPlan.id, payload);
+                      }
 
-              // Update local state regardless
-              setQuestions(
-                questions.map((q) =>
-                  q.id === editingQuestion.id ? { ...editingQuestion, isNew: q.isNew } : q
-                )
-              );
+                      // Update local state regardless
+                      setQuestions(
+                        questions.map((q) =>
+                          q.id === editingQuestion.id ? { ...editingQuestion, isNew: q.isNew } : q
+                        )
+                      );
 
-              setEditingQuestion(null);
-              toast.success("Question updated successfully!");
-            } catch {
-              toast.error("Failed to update question.");
-            }
-          }}
-        >
-          Save
-        </Button>
-      </SheetFooter>
-    </SheetContent>
-  </Sheet>
-)}
+                      setEditingQuestion(null);
+                      toast.success("Question updated successfully!");
+                    } catch {
+                      toast.error("Failed to update question.");
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        )}
 
 
         {/* Delete Question Confirmation Dialog */}
@@ -836,7 +845,7 @@ const handleSaveQuestions = async () => {
                     await deletePreCallPlansQuestions(selectedPlan.id, questionToDelete.id);
                     setQuestions(questions.filter((q) => q.id !== questionToDelete.id));
                     setIsDeleteQuestionDialogOpen(false);
-                     const refreshedPlans = await fetchPreCallPlans();
+                    const refreshedPlans = await fetchPreCallPlans();
                     setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
                     toast.success("Question deleted successfully!");
                   } catch {

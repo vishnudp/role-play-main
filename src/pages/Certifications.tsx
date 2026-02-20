@@ -383,22 +383,22 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                           className="mr-1 mb-1"
                         >
                           <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
-  {icon?.photo ? (
-    <img
-      src={`http://13.51.242.38:4000/${icon.photo}`}
-      alt={icon?.avatar_name}
-      className="w-full h-full object-cover"
-      crossOrigin="anonymous"
-      onError={(e) => {
-        e.currentTarget.style.display = "none";
-      }}
-    />
-  ) : (
-    <span className="text-[10px] text-gray-500 font-medium leading-none">
-      {icon?.avatar_name?.charAt(0)?.toUpperCase()}
-    </span>
-  )}
-</div>{icon?.avatar_name}
+                            {icon?.photo ? (
+                              <img
+                                src={`http://13.51.242.38:4000/${icon.photo}`}
+                                alt={icon?.avatar_name}
+                                className="w-full h-full object-cover"
+                                crossOrigin="anonymous"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <span className="text-[10px] text-gray-500 font-medium leading-none">
+                                {icon?.avatar_name?.charAt(0)?.toUpperCase()}
+                              </span>
+                            )}
+                          </div>{icon?.avatar_name}
                           <button
                             className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                             onMouseDown={(e) => e.preventDefault()}
@@ -444,23 +444,23 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
 
                     {/* ✅ Image + Name in single row */}
                     <div className="flex items-center gap-2 text-sm">
-                     <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
-  {icon?.photo ? (
-    <img
-      src={`http://13.51.242.38:4000/${icon.photo}`}
-      alt={icon?.avatar_name}
-      className="w-full h-full object-cover"
-      crossOrigin="anonymous"
-      onError={(e) => {
-        e.currentTarget.style.display = "none";
-      }}
-    />
-  ) : (
-    <span className="text-[10px] text-gray-500 font-medium leading-none">
-      {icon?.avatar_name?.charAt(0)?.toUpperCase()}
-    </span>
-  )}
-</div>
+                      <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
+                        {icon?.photo ? (
+                          <img
+                            src={`http://13.51.242.38:4000/${icon.photo}`}
+                            alt={icon?.avatar_name}
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <span className="text-[10px] text-gray-500 font-medium leading-none">
+                            {icon?.avatar_name?.charAt(0)?.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
                       <span className="whitespace-nowrap">
                         {icon.avatar_name}
                       </span>
@@ -748,53 +748,62 @@ const Certifications = () => {
         {/* Table */}
         <Card className="border-border/50 shadow-sm">
           <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="font-semibold">Name</TableHead>
-                  <TableHead className="font-semibold">Organization</TableHead>
-                  <TableHead className="font-semibold">Roleplays</TableHead>
-                  <TableHead className="font-semibold">Min Score</TableHead>
-                  <TableHead className="font-semibold text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {certifications.map((cert) => (
-                  <TableRow key={cert.id} className="border-border/50 hover:bg-muted/30">
-                    <TableCell className="font-medium">{cert.name}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {cert.organizations.map((org, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{org?.organization?.name}</Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {cert.rolePlays.map((rp, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{rp?.rolePlay?.name}</Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{cert.min_score}/10</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditClick(cert)}>
-                          <Edit className="h-3.5 w-3.5 mr-1.5" />
-                          Edit
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(cert)}>
-                          <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                  <p className="text-sm text-muted-foreground">Loading certifications...</p>
+                </div>
+              </div>
+            ) :
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="font-semibold">Name</TableHead>
+                    <TableHead className="font-semibold">Organization</TableHead>
+                    <TableHead className="font-semibold">Roleplays</TableHead>
+                    <TableHead className="font-semibold">Min Score</TableHead>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {certifications.map((cert) => (
+                    <TableRow key={cert.id} className="border-border/50 hover:bg-muted/30">
+                      <TableCell className="font-medium">{cert.name}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {cert.organizations.map((org, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">{org?.organization?.name}</Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {cert.rolePlays.map((rp, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">{rp?.rolePlay?.name}</Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{cert.min_score}/10</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditClick(cert)}>
+                            <Edit className="h-3.5 w-3.5 mr-1.5" />
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(cert)}>
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            }
           </CardContent>
         </Card>
 

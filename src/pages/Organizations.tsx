@@ -44,7 +44,8 @@ const Organizations = () => {
   const [orgToDelete, setOrgToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
-  
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [currentDocument, setCurrentDocument] = useState<Document>({
     id: Date.now().toString(),
     name: "",
@@ -182,17 +183,17 @@ const Organizations = () => {
     setSelectedOrg(org);
 
     setFormData({
-  name: org.name || "",
-  email: org.email || "",
-  password: "",
-  phone: org.phone || "",
-  address: org.organization?.address || "",
-  description: org.organization?.description || "",
-  contact_person_name: org.organization?.contact_person_name || "",
-  contact_person_phone: org.organization?.contact_person_phone || "",
-  contact_person_email: org.organization?.contact_person_email || "",
-  is_active: org.is_active ?? true,
-});
+      name: org.name || "",
+      email: org.email || "",
+      password: "",
+      phone: org.phone || "",
+      address: org.organization?.address || "",
+      description: org.organization?.description || "",
+      contact_person_name: org.organization?.contact_person_name || "",
+      contact_person_phone: org.organization?.contact_person_phone || "",
+      contact_person_email: org.organization?.contact_person_email || "",
+      is_active: org.is_active ?? true,
+    });
 
     setIsEditSheetOpen(true);
   };
@@ -263,23 +264,23 @@ const Organizations = () => {
   };
 
   const handleViewOrg = (org: any) => {
-  setSelectedOrg(org);
+    setSelectedOrg(org);
 
-  setFormData({
-  name: org.name || "",
-  email: org.email || "",
-  password: "",
-  phone: org.phone || "",
-  address: org.organization?.address || "",
-  description: org.organization?.description || "",
-  contact_person_name: org.organization?.contact_person_name || "",
-  contact_person_phone: org.organization?.contact_person_phone || "",
-  contact_person_email: org.organization?.contact_person_email || "",
-  is_active: org.is_active ?? true,
-});
+    setFormData({
+      name: org.name || "",
+      email: org.email || "",
+      password: "",
+      phone: org.phone || "",
+      address: org.organization?.address || "",
+      description: org.organization?.description || "",
+      contact_person_name: org.organization?.contact_person_name || "",
+      contact_person_phone: org.organization?.contact_person_phone || "",
+      contact_person_email: org.organization?.contact_person_email || "",
+      is_active: org.is_active ?? true,
+    });
 
-  setIsViewSheetOpen(true);
-};
+    setIsViewSheetOpen(true);
+  };
 
 
   const handleAddDocument = () => {
@@ -344,7 +345,8 @@ const Organizations = () => {
           <CardContent className="pt-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search organizations by name, email, or phone..." className="pl-10 h-11 bg-background border-border/50" />
+              <Input placeholder="Search organizations by name, email, or phone..." className="pl-10 h-11 bg-background border-border/50" value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </CardContent>
         </Card>
@@ -352,82 +354,100 @@ const Organizations = () => {
         {/* Organizations List */}
         <Card className="border-border/50 shadow-sm">
           <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="font-semibold">Organization</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {organizations.map((org) => (
-                  <TableRow key={org.id} className="border-border/50 hover:bg-muted/30">
-                    <TableCell>
-                      <p className="font-semibold text-foreground">{org.name}</p>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={org.is_active ? "default" : "secondary"}>
-                        {org.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditOrg(org)}>
-                          <Edit className="h-3.5 w-3.5 mr-1.5" />
-                          Edit
-                        </Button>
-
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewOrg(org)}>
-                          View
-                        </Button>
-
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="h-8"
-                              onClick={() => setOrgToDelete(org)}
-                            >
-                              Delete
-                            </Button>
-                          </AlertDialogTrigger>
-
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Delete Organization
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete{" "}
-                                <strong>{org.name}</strong>?
-                                This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-
-                            <AlertDialogFooter>
-                              <AlertDialogCancel onClick={() => setOrgToDelete(null)}>
-                                Cancel
-                              </AlertDialogCancel>
-
-                              <AlertDialogAction
-                                onClick={handleDeleteOrganization}
-                                disabled={isDeleting}
-                                className="bg-destructive hover:bg-destructive/90"
-                              >
-                                {isDeleting ? "Deleting..." : "Delete"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                  <p className="text-sm text-muted-foreground">Loading organizations...</p>
+                </div>
+              </div>
+            ) :
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="font-semibold">Organization</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {organizations
+                    .filter((org) => {
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        org.name.toLowerCase().includes(query) ||
+                        org.email?.toLowerCase().includes(query) ||
+                        org.phone?.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((org) => (
+                      <TableRow key={org.id} className="border-border/50 hover:bg-muted/30">
+                        <TableCell>
+                          <p className="font-semibold text-foreground">{org.name}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={org.is_active ? "default" : "secondary"}>
+                            {org.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditOrg(org)}>
+                              <Edit className="h-3.5 w-3.5 mr-1.5" />
+                              Edit
+                            </Button>
+
+                            <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewOrg(org)}>
+                              View
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="h-8"
+                                  onClick={() => setOrgToDelete(org)}
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Delete Organization
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete{" "}
+                                    <strong>{org.name}</strong>?
+                                    This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={() => setOrgToDelete(null)}>
+                                    Cancel
+                                  </AlertDialogCancel>
+
+                                  <AlertDialogAction
+                                    onClick={handleDeleteOrganization}
+                                    disabled={isDeleting}
+                                    className="bg-destructive hover:bg-destructive/90"
+                                  >
+                                    {isDeleting ? "Deleting..." : "Delete"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            }
           </CardContent>
         </Card>
 
@@ -490,10 +510,10 @@ const Organizations = () => {
                         <Label htmlFor="contact-email">Contact Email</Label>
                         <Input id="contact-email" type="email" placeholder="contact@example.com" />
                       </div>
-                      
+
                     </div>
-                     <div className="grid grid-cols-2 gap-4">
-                     
+                    <div className="grid grid-cols-2 gap-4">
+
                       <div className="space-y-2">
                         <Label htmlFor="contact-phone">Contact Phone</Label>
                         <Input id="contact-phone" type="tel" placeholder="+1 234 567 8900" />
@@ -545,12 +565,12 @@ const Organizations = () => {
                         <div className="space-y-2">
                           <Label htmlFor="edit-entity-name">Entity Name *</Label>
                           <Input id="edit-entity-name" value={formData.name}
-onChange={(e) => handleInputChange("name", e.target.value)} required />
+                            onChange={(e) => handleInputChange("name", e.target.value)} required />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-entity-address">Entity Address</Label>
                           <Input id="edit-entity-address" value={formData.address}
-onChange={(e) => handleInputChange("address", e.target.value)} />
+                            onChange={(e) => handleInputChange("address", e.target.value)} />
                         </div>
                       </div>
 
@@ -570,10 +590,10 @@ onChange={(e) => handleInputChange("address", e.target.value)} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-login-password">Password</Label>
-                          <Input id="edit-login-password" type="password" placeholder="Leave blank to keep current" 
-                           value={formData.password}
-  onChange={(e) => handleInputChange("password", e.target.value)}
-  />
+                          <Input id="edit-login-password" type="password" placeholder="Leave blank to keep current"
+                            value={formData.password}
+                            onChange={(e) => handleInputChange("password", e.target.value)}
+                          />
                         </div>
                       </div>
                     </div>
@@ -585,16 +605,16 @@ onChange={(e) => handleInputChange("address", e.target.value)} />
                         <div className="space-y-2">
                           <Label htmlFor="edit-contact-name">Contact Name</Label>
                           <Input id="edit-contact-name" type="text" value={formData.contact_person_name}
-  onChange={(e) => handleInputChange("contact_person_name", e.target.value)} />
+                            onChange={(e) => handleInputChange("contact_person_name", e.target.value)} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-contact-email">Contact Email</Label>
                           <Input id="edit-contact-email" type="email" value={formData.contact_person_email}
-  onChange={(e) => handleInputChange("contact_person_email", e.target.value)} />
+                            onChange={(e) => handleInputChange("contact_person_email", e.target.value)} />
                         </div>
                       </div>
-                       <div className="grid grid-cols-2 gap-4">
-                        
+                      <div className="grid grid-cols-2 gap-4">
+
                         <div className="space-y-2">
                           <Label htmlFor="edit-contact-phone">Contact Phone</Label>
                           <Input id="edit-contact-phone" type="tel" value={formData.contact_person_phone} onChange={(e) => handleInputChange("contact_person_phone", e.target.value)} />
@@ -609,7 +629,7 @@ onChange={(e) => handleInputChange("address", e.target.value)} />
                         <p className="text-sm text-muted-foreground">Enable this organization</p>
                       </div>
                       <Switch id="edit-active-status" checked={formData.is_active}
-  onCheckedChange={(val) => handleInputChange("is_active", val)} />
+                        onCheckedChange={(val) => handleInputChange("is_active", val)} />
                     </div>
                   </div>
                 )}
@@ -631,73 +651,73 @@ onChange={(e) => handleInputChange("address", e.target.value)} />
         </Sheet>
 
         {/* View Organization Sheet */}
-<Sheet open={isViewSheetOpen} onOpenChange={setIsViewSheetOpen}>
-  <SheetContent side="right" className="w-full sm:max-w-2xl">
-    <div className="p-6 space-y-6">
-      <SheetHeader>
-        <SheetTitle>View Organization</SheetTitle>
-        <SheetDescription>Read-only organization details</SheetDescription>
-      </SheetHeader>
+        <Sheet open={isViewSheetOpen} onOpenChange={setIsViewSheetOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-2xl">
+            <div className="p-6 space-y-6">
+              <SheetHeader>
+                <SheetTitle>View Organization</SheetTitle>
+                <SheetDescription>Read-only organization details</SheetDescription>
+              </SheetHeader>
 
-      {selectedOrg && (
-        <div className="space-y-4">
+              {selectedOrg && (
+                <div className="space-y-4">
 
-          <div>
-            <Label>Entity Name</Label>
-            <Input value={formData.name} disabled />
-          </div>
+                  <div>
+                    <Label>Entity Name</Label>
+                    <Input value={formData.name} disabled />
+                  </div>
 
-          <div>
-            <Label>Email</Label>
-            <Input value={formData.email} disabled />
-          </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input value={formData.email} disabled />
+                  </div>
 
-          <div>
-            <Label>Phone</Label>
-            <Input value={formData.phone} disabled />
-          </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input value={formData.phone} disabled />
+                  </div>
 
-          <div>
-            <Label>Address</Label>
-            <Input value={formData.address} disabled />
-          </div>
+                  <div>
+                    <Label>Address</Label>
+                    <Input value={formData.address} disabled />
+                  </div>
 
-          <div>
-            <Label>Description</Label>
-            <Textarea value={formData.description} disabled />
-          </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea value={formData.description} disabled />
+                  </div>
 
-          <div>
-            <Label>Contact Person Name</Label>
-            <Input value={formData.contact_person_name} disabled />
-          </div>
+                  <div>
+                    <Label>Contact Person Name</Label>
+                    <Input value={formData.contact_person_name} disabled />
+                  </div>
 
-          <div>
-            <Label>Contact Person Phone</Label>
-            <Input value={formData.contact_person_phone} disabled />
-          </div>
+                  <div>
+                    <Label>Contact Person Phone</Label>
+                    <Input value={formData.contact_person_phone} disabled />
+                  </div>
 
-          <div>
-            <Label>Contact Person Email</Label>
-            <Input value={formData.contact_person_email} disabled />
-          </div>
+                  <div>
+                    <Label>Contact Person Email</Label>
+                    <Input value={formData.contact_person_email} disabled />
+                  </div>
 
-          <div className="flex items-center justify-between">
-            <Label>Active</Label>
-            <Switch checked={formData.is_active} disabled />
-          </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Active</Label>
+                    <Switch checked={formData.is_active} disabled />
+                  </div>
 
-        </div>
-      )}
+                </div>
+              )}
 
-      <SheetFooter>
-        <Button onClick={() => setIsViewSheetOpen(false)}>
-          Close
-        </Button>
-      </SheetFooter>
-    </div>
-  </SheetContent>
-</Sheet>
+              <SheetFooter>
+                <Button onClick={() => setIsViewSheetOpen(false)}>
+                  Close
+                </Button>
+              </SheetFooter>
+            </div>
+          </SheetContent>
+        </Sheet>
 
       </div>
     </DashboardLayout>

@@ -38,7 +38,7 @@ const Login = () => {
       {/* Left side - Branding & Visual */}
       <div className="hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuMDUiLz48L2c+PC9zdmc+')] opacity-40"></div>
-        
+
         <div className="relative z-10">
           <Logo size="lg" />
           <div className="mt-12 space-y-6">

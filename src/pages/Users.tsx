@@ -361,119 +361,128 @@ const UsersPage = () => {
         <Card className="border-border/50 shadow-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/30 border-b border-border/50">
-                  <tr>
-                    <th className="text-left p-4 text-sm font-semibold text-muted-foreground">User</th>
-                    <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Organization</th>
-                    <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Role Type</th>
-                    <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Role</th>
-                    <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Status</th>
-                    <th className="text-right p-4 text-sm font-semibold text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border-2 border-border/50">
-                            {/* <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} /> */}
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                              {user.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-foreground">{user.name}</p>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Mail className="h-3 w-3" />
-                              {user.email}
+              {loading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                    <p className="text-sm text-muted-foreground">Loading users...</p>
+                  </div>
+                </div>
+              ) :
+                <table className="w-full">
+                  <thead className="bg-muted/30 border-b border-border/50">
+                    <tr>
+                      <th className="text-left p-4 text-sm font-semibold text-muted-foreground">User</th>
+                      <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Organization</th>
+                      <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Role Type</th>
+                      <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Role</th>
+                      <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Status</th>
+                      <th className="text-right p-4 text-sm font-semibold text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 border-2 border-border/50">
+                              {/* <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} /> */}
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                {user.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold text-foreground">{user.name}</p>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Mail className="h-3 w-3" />
+                                {user.email}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="font-medium text-foreground">{user?.organization}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant="outline" className="font-normal">
-                          {user.role_type === "Super Admin" || user.role_type === "Org Admin" ? "Admin" : "Mobile App"}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant={getRoleBadgeVariant(user.role_type)}>
-                          {user.role_type}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant={user.is_active ? "default" : "secondary"} className="font-normal">
-                          {user.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 text-xs hover:bg-primary/10 hover:text-primary"
-                            onClick={() => openEditSheet(user)}
-                          >
-                            Edit
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {/* <DropdownMenuItem>View Profile</DropdownMenuItem>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5 text-sm">
+                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="font-medium text-foreground">{user?.organization}</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant="outline" className="font-normal">
+                            {user.role_type === "Super Admin" || user.role_type === "Org Admin" ? "Admin" : "Mobile App"}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant={getRoleBadgeVariant(user.role_type)}>
+                            {user.role_type}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant={user.is_active ? "default" : "secondary"} className="font-normal">
+                            {user.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs hover:bg-primary/10 hover:text-primary"
+                              onClick={() => openEditSheet(user)}
+                            >
+                              Edit
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {/* <DropdownMenuItem>View Profile</DropdownMenuItem>
                               <DropdownMenuItem>Change Role</DropdownMenuItem>
                               <DropdownMenuItem>Reset Password</DropdownMenuItem> */}
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem
-                                    onSelect={(e) => {
-                                      e.preventDefault();
-                                      setDeleteUserId(user.id);
-                                    }}
-                                    className="text-destructive"
-                                  >
-                                    Delete
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This action cannot be undone. This will permanently delete the user.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={handleDeleteUser}
-                                      className="bg-destructive text-white hover:bg-destructive/90"
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem
+                                      onSelect={(e) => {
+                                        e.preventDefault();
+                                        setDeleteUserId(user.id);
+                                      }}
+                                      className="text-destructive"
                                     >
                                       Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
 
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the user.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={handleDeleteUser}
+                                        className="bg-destructive text-white hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              }
             </div>
           </CardContent>
         </Card>

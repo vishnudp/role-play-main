@@ -367,52 +367,52 @@ const RolePlays = () => {
   // };
 
 
- useEffect(() => {
-  async function loadData() {
-    setLoading(true);
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        await loadRolePlays();
+
+        const orgs = await fetchOrganizations();
+        setOrganizations(Array.isArray(orgs) ? orgs : []);
+
+        const docs = await fetchDocuments();
+        setDocuments(Array.isArray(docs) ? docs : []);
+
+        const users = await fetchUsers();
+        setUsers(Array.isArray(users) ? users : []);
+
+        const plans = await fetchPreCallPlans();
+        setPreCallPlans(Array.isArray(plans) ? plans : []);
+
+        const avatarsData = await fetchAvatars();
+        setAvatars(Array.isArray(avatarsData) ? avatarsData : []);
+
+        const guardrailsData = await fetchGuardrails();
+        setGuardrails(Array.isArray(guardrailsData) ? guardrailsData : []);
+
+        const categoriesData = await fetchCategories();
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  const loadRolePlays = async () => {
     try {
-      await loadRolePlays();
-
-      const orgs = await fetchOrganizations();
-      setOrganizations(Array.isArray(orgs) ? orgs : []);
-
-      const docs = await fetchDocuments();
-      setDocuments(Array.isArray(docs) ? docs : []);
-
-      const users = await fetchUsers();
-      setUsers(Array.isArray(users) ? users : []);
-
-      const plans = await fetchPreCallPlans();
-      setPreCallPlans(Array.isArray(plans) ? plans : []);
-
-      const avatarsData = await fetchAvatars();
-      setAvatars(Array.isArray(avatarsData) ? avatarsData : []);
-
-      const guardrailsData = await fetchGuardrails();
-      setGuardrails(Array.isArray(guardrailsData) ? guardrailsData : []);
-
-      const categoriesData = await fetchCategories();
-      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-
+      setLoading(true);
+      const data = await fetchRolePlays();
+      setRolePlay(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setRolePlay([]);
     } finally {
       setLoading(false);
     }
-  }
-
-  loadData();
-}, []);
-
-const loadRolePlays = async () => {
-  try {
-    setLoading(true);
-    const data = await fetchRolePlays();
-    setRolePlay(Array.isArray(data) ? data : []);
-  } catch (error) {
-    setRolePlay([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Filter documents based on selected organization
   const filteredDocuments = selectedOrganization
@@ -465,7 +465,7 @@ const loadRolePlays = async () => {
       setSelectedAvatars("");
       setSelectedGuardrails("");
       setIsActive(true);
-        await loadRolePlays();
+      await loadRolePlays();
 
       // Reset form
 
@@ -476,65 +476,65 @@ const loadRolePlays = async () => {
 
   };
 
- const handleEditRolePlay = (roleplay: RolePlay) => {
-  setSelectedRolePlay(roleplay);
+  const handleEditRolePlay = (roleplay: RolePlay) => {
+    setSelectedRolePlay(roleplay);
 
-  setRoleplayName(roleplay.name);
-  setSelectedCategory(roleplay.category_id);
-  setSelectedSubcategory(roleplay.subcategory_id);
-  setSelectedOrganization(roleplay.organization_id);
-  setSelectedDocument(roleplay.document_id);
-  setSelectedPreCallPlans(roleplay.precall_plan_id);
-  setSelectedAvatars(roleplay.avatar_id);
-  setSelectedGuardrails(roleplay.guardrail_id);
-  setIsActive(roleplay.is_active);
+    setRoleplayName(roleplay.name);
+    setSelectedCategory(roleplay.category_id);
+    setSelectedSubcategory(roleplay.subcategory_id);
+    setSelectedOrganization(roleplay.organization_id);
+    setSelectedDocument(roleplay.document_id);
+    setSelectedPreCallPlans(roleplay.precall_plan_id);
+    setSelectedAvatars(roleplay.avatar_id);
+    setSelectedGuardrails(roleplay.guardrail_id);
+    setIsActive(roleplay.is_active);
 
-  setIsEditSheetOpen(true);
-};
+    setIsEditSheetOpen(true);
+  };
 
   const handleUpdateRolePlay = async () => {
     console.log("Update clicked");
-  console.log("Selected Roleplay:", selectedRolePlay);
+    console.log("Selected Roleplay:", selectedRolePlay);
 
-  try {
-    if (!selectedRolePlay) {
-      console.log("No roleplay selected");
-      return;
+    try {
+      if (!selectedRolePlay) {
+        console.log("No roleplay selected");
+        return;
+      }
+
+      const payload = {
+        name: roleplayName,
+        organization_id: selectedOrganization,
+        subcategory_id: selectedSubcategory,
+        precall_plan_id: selectedPreCallPlans,
+        avatar_id: selectedAvatars,
+        guardrail_id: selectedGuardrails,
+        document_id: selectedDocument,
+        is_active: isActive,
+      };
+
+      console.log("Update Payload:", payload);
+
+      await editRoleplay(selectedRolePlay.id, payload);
+
+      setIsEditSheetOpen(false);
+      setSelectedRolePlay(null);
+      setSelectedCategory("");
+      setSelectedSubcategory("");
+      setSelectedOrganization("");
+      setSelectedDocument("");
+      setSelectedPreCallPlans("");
+      setSelectedAvatars("");
+      setSelectedGuardrails("");
+      toast.success("Roleplay updated successfully");
+      await loadRolePlays();
+
+      await loadRolePlays();
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error("Failed to update roleplay");
     }
 
-    const payload = {
-      name: roleplayName,
-      organization_id: selectedOrganization,
-      subcategory_id: selectedSubcategory,
-      precall_plan_id: selectedPreCallPlans,
-      avatar_id: selectedAvatars,
-      guardrail_id: selectedGuardrails,
-      document_id: selectedDocument,
-      is_active: isActive,
-    };
-
-    console.log("Update Payload:", payload);
-
-    await editRoleplay(selectedRolePlay.id, payload);
-
-     setIsEditSheetOpen(false);
-    setSelectedRolePlay(null);
-    setSelectedCategory("");
-    setSelectedSubcategory("");
-    setSelectedOrganization("");
-    setSelectedDocument("");
-    setSelectedPreCallPlans("");
-    setSelectedAvatars("");
-    setSelectedGuardrails("");
-    toast.success("Roleplay updated successfully");
-    await loadRolePlays();
-
-    await loadRolePlays();
-  } catch (error) {
-    console.error("Update error:", error);
-    toast.error("Failed to update roleplay");
-  }
-   
   };
 
   const handleDeleteClick = (roleplay: RolePlay) => {
@@ -542,24 +542,24 @@ const loadRolePlays = async () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async() => {
+  const handleDeleteConfirm = async () => {
     if (sessionToDelete) {
       setRolePlay(roleplays.filter((s) => s.id !== sessionToDelete.id));
 
-       try {
-    await deleteRoleplay(sessionToDelete.id);
-    toast.success("Roleplay deleted successfully");
+      try {
+        await deleteRoleplay(sessionToDelete.id);
+        toast.success("Roleplay deleted successfully");
 
-    // Refresh list from API
-    await loadRolePlays();
+        // Refresh list from API
+        await loadRolePlays();
 
-  } catch (error) {
-    console.error("Delete error:", error);
-    toast.error("Failed to delete roleplay");
-  } finally {
-    setIsDeleteDialogOpen(false);
-    setSessionToDelete(null);
-  }
+      } catch (error) {
+        console.error("Delete error:", error);
+        toast.error("Failed to delete roleplay");
+      } finally {
+        setIsDeleteDialogOpen(false);
+        setSessionToDelete(null);
+      }
     }
     setIsDeleteDialogOpen(false);
     setSessionToDelete(null);
@@ -601,54 +601,63 @@ const loadRolePlays = async () => {
         {/* Sessions Table */}
         <Card className="border-border/50 shadow-sm">
           <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="font-semibold">Roleplay Name</TableHead>
-                  <TableHead className="font-semibold">Organization</TableHead>
-                  <TableHead className="font-semibold">Category</TableHead>
-                  <TableHead className="font-semibold">Avatar</TableHead>
-                  <TableHead className="font-semibold text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roleplays.map((roleplay) => (
-                  <TableRow key={roleplay.id} className="border-border/50 hover:bg-muted/30">
-                    <TableCell>
-                      <p className="font-semibold text-foreground">{roleplay.name}</p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-foreground">{getOrganizationName(organizations, roleplay.organization_id)}</p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-foreground">
-                        {getCategoryName(categories, roleplay.category_id)} / {getSubCategoryName(categories, roleplay.category_id, roleplay.subcategory_id)}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-foreground">{getAvatarName(avatars, roleplay.avatar_id)}</p>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRolePlay(roleplay)}>
-                          <Edit className="h-3.5 w-3.5 mr-1.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteClick(roleplay)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                  <p className="text-sm text-muted-foreground">Loading roleplays...</p>
+                </div>
+              </div>
+            ) :
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="font-semibold">Roleplay Name</TableHead>
+                    <TableHead className="font-semibold">Organization</TableHead>
+                    <TableHead className="font-semibold">Category</TableHead>
+                    <TableHead className="font-semibold">Avatar</TableHead>
+                    <TableHead className="font-semibold text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {roleplays.map((roleplay) => (
+                    <TableRow key={roleplay.id} className="border-border/50 hover:bg-muted/30">
+                      <TableCell>
+                        <p className="font-semibold text-foreground">{roleplay.name}</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-foreground">{getOrganizationName(organizations, roleplay.organization_id)}</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-foreground">
+                          {getCategoryName(categories, roleplay.category_id)} / {getSubCategoryName(categories, roleplay.category_id, roleplay.subcategory_id)}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-foreground">{getAvatarName(avatars, roleplay.avatar_id)}</p>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRolePlay(roleplay)}>
+                            <Edit className="h-3.5 w-3.5 mr-1.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteClick(roleplay)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            }
           </CardContent>
         </Card>
       </div>

@@ -77,6 +77,8 @@ const AssignmentForm = ({
   const filteredUsers = getFilteredUsers();
   const allSelected = filteredUsers.length > 0 && formData.assignedUsers.length === filteredUsers.length;
 
+
+
   return (
     <div className="space-y-6 py-6">
       {/* Assignment Name */}
@@ -288,7 +290,7 @@ const Assignments = () => {
   const [certificates, setCertificates] = useState<any[]>([]);
   const [assignmentType, setAssignmentType] = useState<"ROLE_PLAY" | "CERTIFICATE">("ROLE_PLAY");
   const filteredRolePlays = rolePlays.filter(rp => rp.organization === selectedOrganization);
-const filteredCertificates = certificates.filter(c => c.organization === selectedOrganization);
+  const filteredCertificates = certificates.filter(c => c.organization === selectedOrganization);
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -367,33 +369,33 @@ const filteredCertificates = certificates.filter(c => c.organization === selecte
     return session?.organization || "";
   };
 
- const getSelectedOrganization = () => {
-  if (assignmentType === "ROLE_PLAY") {
-    if (!formData.rolePlayIds || formData.rolePlayIds.length === 0) return "";
-    const firstRP = rolePlays.find(rp => rp.id === parseInt(formData.rolePlayIds[0]));
-    return firstRP?.organization || "";
-  } else if (assignmentType === "CERTIFICATE") {
-    if (!formData.certificateId) return "";
-    const cert = certificates.find(c => c.id === parseInt(formData.certificateId));
-    return cert?.organization || "";
-  }
-  return "";
-};
+  const getSelectedOrganization = () => {
+    if (assignmentType === "ROLE_PLAY") {
+      if (!formData.rolePlayIds || formData.rolePlayIds.length === 0) return "";
+      const firstRP = rolePlays.find(rp => rp.id === parseInt(formData.rolePlayIds[0]));
+      return firstRP?.organization || "";
+    } else if (assignmentType === "CERTIFICATE") {
+      if (!formData.certificateId) return "";
+      const cert = certificates.find(c => c.id === parseInt(formData.certificateId));
+      return cert?.organization || "";
+    }
+    return "";
+  };
 
   // Filter users based on selected session's organization
- const getFilteredUsers = () => {
-  if (!selectedOrganization) return [];
-  return allUsers.filter(u => u.parent?.parent_id?.toString() === selectedOrganization.toString());
-};
+  const getFilteredUsers = () => {
+    if (!selectedOrganization) return [];
+    return allUsers.filter(u => u.parent?.parent_id?.toString() === selectedOrganization.toString());
+  };
 
   const handleSelectAllUsers = (checked: boolean) => {
-  if (checked) {
-    const filteredUsers = getFilteredUsers();
-    setFormData({ ...formData, assignedUsers: filteredUsers.map(u => u.id) });
-  } else {
-    setFormData({ ...formData, assignedUsers: [] });
-  }
-};
+    if (checked) {
+      const filteredUsers = getFilteredUsers();
+      setFormData({ ...formData, assignedUsers: filteredUsers.map(u => u.id) });
+    } else {
+      setFormData({ ...formData, assignedUsers: [] });
+    }
+  };
 
   const handleUserToggle = (userId: string) => {
     if (formData.assignedUsers.includes(userId)) {
@@ -409,17 +411,17 @@ const filteredCertificates = certificates.filter(c => c.organization === selecte
     }
   };
 
- const resetForm = () => {
-  setFormData({
-    name: "",
-    rolePlayIds: [],
-    certificateId: "",
-    dueDate: "",
-    dueTime: "",
-    assignedUsers: []
-  });
-  setSelectedOrganization("");
-};
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      rolePlayIds: [],
+      certificateId: "",
+      dueDate: "",
+      dueTime: "",
+      assignedUsers: []
+    });
+    setSelectedOrganization("");
+  };
 
   const handleCreateAssignment = async () => {
     if (!formData.name || !formData.dueDate || !formData.dueTime ||
@@ -563,7 +565,14 @@ const filteredCertificates = certificates.filter(c => c.organization === selecte
         {/* Scenarios Table */}
         <Card className="border-border/50 shadow-sm">
           <CardContent className="pt-6">
-            <Table>
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                  <p className="text-sm text-muted-foreground">Loading assignments...</p>
+                </div>
+              </div>
+            ) : <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="font-semibold">Assignment Name</TableHead>
@@ -628,7 +637,7 @@ const filteredCertificates = certificates.filter(c => c.organization === selecte
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </Table>}
           </CardContent>
         </Card>
       </div>
@@ -644,21 +653,21 @@ const filteredCertificates = certificates.filter(c => c.organization === selecte
               </SheetDescription>
             </SheetHeader>
             <AssignmentForm
-  isEdit={false}
-  formData={formData}
-  setFormData={setFormData}
-  assignmentType={assignmentType}
-  setAssignmentType={setAssignmentType}
-  selectedOrganization={selectedOrganization}
-  setSelectedOrganization={setSelectedOrganization}
-  users={users}
-  rolePlays={rolePlays}
-  certificates={certificates}
-  organizations={organizations}
-  getFilteredUsers={getFilteredUsers}
-  filteredRolePlays={rolePlays.filter(rp => rp.organization === selectedOrganization)}  // <-- ADD THIS
-  filteredCertificates={certificates.filter(c => c.organization === selectedOrganization)} // optional for certificates dropdown
-/>
+              isEdit={false}
+              formData={formData}
+              setFormData={setFormData}
+              assignmentType={assignmentType}
+              setAssignmentType={setAssignmentType}
+              selectedOrganization={selectedOrganization}
+              setSelectedOrganization={setSelectedOrganization}
+              users={users}
+              rolePlays={rolePlays}
+              certificates={certificates}
+              organizations={organizations}
+              getFilteredUsers={getFilteredUsers}
+              filteredRolePlays={rolePlays.filter(rp => rp.organization === selectedOrganization)}  // <-- ADD THIS
+              filteredCertificates={certificates.filter(c => c.organization === selectedOrganization)} // optional for certificates dropdown
+            />
           </div>
 
           <SheetFooter className="border-t bg-background p-6 mt-auto">
@@ -692,21 +701,21 @@ const filteredCertificates = certificates.filter(c => c.organization === selecte
               </SheetDescription>
             </SheetHeader>
             <AssignmentForm
-  isEdit={true}
-  formData={formData}
-  setFormData={setFormData}
-  assignmentType={assignmentType}
-  setAssignmentType={setAssignmentType}
-  selectedOrganization={selectedOrganization}
-  setSelectedOrganization={setSelectedOrganization}
-  users={users}
-  rolePlays={rolePlays}
-  certificates={certificates}
-  organizations={organizations}
-  getFilteredUsers={getFilteredUsers}
-  filteredRolePlays={rolePlays.filter(rp => rp.organization === selectedOrganization)}  // <-- ADD THIS
-  filteredCertificates={certificates.filter(c => c.organization === selectedOrganization)} // optional for certificates dropdown
-/>
+              isEdit={true}
+              formData={formData}
+              setFormData={setFormData}
+              assignmentType={assignmentType}
+              setAssignmentType={setAssignmentType}
+              selectedOrganization={selectedOrganization}
+              setSelectedOrganization={setSelectedOrganization}
+              users={users}
+              rolePlays={rolePlays}
+              certificates={certificates}
+              organizations={organizations}
+              getFilteredUsers={getFilteredUsers}
+              filteredRolePlays={rolePlays.filter(rp => rp.organization === selectedOrganization)}  // <-- ADD THIS
+              filteredCertificates={certificates.filter(c => c.organization === selectedOrganization)} // optional for certificates dropdown
+            />
           </div>
 
           <SheetFooter className="border-t bg-background p-6 mt-auto">

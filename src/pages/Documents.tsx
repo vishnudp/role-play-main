@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fetchOrganizations } from "../api/apiService";
 import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers } from "../api/apiService";
-import { getOrganizationName, getUserName , formatToLongDate, formatFileSize, handleView, handleDownload} from "../lib/lookupUtils";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
 import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File, Eye } from "lucide-react";
 
 
@@ -205,100 +205,109 @@ const Documents = () => {
           </CardHeader>
           <CardContent>
             <div className="rounded-md border border-border/50">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="font-medium">Document</TableHead>
-                    {isSuperAdmin && <TableHead className="font-medium">Organization</TableHead>}
-                    <TableHead className="font-medium">Uploaded By</TableHead>
-                    <TableHead className="font-medium">Date</TableHead>
-                    <TableHead className="font-medium">Size</TableHead>
-                    <TableHead className="font-medium text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDocuments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-12 text-muted-foreground">
-                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                        <p>No documents found</p>
-                      </TableCell>
+              {loading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                    <p className="text-sm text-muted-foreground">Loading documents...</p>
+                  </div>
+                </div>
+              ) :
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead className="font-medium">Document</TableHead>
+                      {isSuperAdmin && <TableHead className="font-medium">Organization</TableHead>}
+                      <TableHead className="font-medium">Uploaded By</TableHead>
+                      <TableHead className="font-medium">Date</TableHead>
+                      <TableHead className="font-medium">Size</TableHead>
+                      <TableHead className="font-medium text-right">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredDocuments.map((doc) => (
-                      <TableRow key={doc.id} className="group">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                              {getFileIcon(doc.type)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">{doc.name}</p>
-                              <p className="text-sm text-muted-foreground">{doc.fileName}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        {isSuperAdmin && (
-                          <TableCell>
-                            <Badge variant="outline" className="font-normal">
-                              {getOrganizationName(organizations, doc.organization_id || doc.orgId)}
-                            </Badge>
-                          </TableCell>
-                        )}
-                        <TableCell className="text-muted-foreground">{getUserName(users, doc.created_by)}</TableCell>
-                        <TableCell className="text-muted-foreground">{formatToLongDate(doc.updated_at)}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            {formatFileSize(doc.size)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
-                                <Eye className="h-4 w-4" />
-                                View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleDownload(doc)}>
-                                <Download className="h-4 w-4" />
-                                Download
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDocuments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-12 text-muted-foreground">
+                          <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No documents found</p>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      filteredDocuments.map((doc) => (
+                        <TableRow key={doc.id} className="group">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                {getFileIcon(doc.type)}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{doc.name}</p>
+                                <p className="text-sm text-muted-foreground">{doc.fileName}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          {isSuperAdmin && (
+                            <TableCell>
+                              <Badge variant="outline" className="font-normal">
+                                {getOrganizationName(organizations, doc.organization_id || doc.orgId)}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          <TableCell className="text-muted-foreground">{getUserName(users, doc.created_by)}</TableCell>
+                          <TableCell className="text-muted-foreground">{formatToLongDate(doc.updated_at)}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="font-normal">
+                              {formatFileSize(doc.size)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
+                                  <Eye className="h-4 w-4" />
+                                  View
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleDownload(doc)}>
+                                  <Download className="h-4 w-4" />
+                                  Download
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                  onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              }
             </div>
           </CardContent>
         </Card>
-      {/* Delete Confirmation Dialog (now outside map) */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Document</DialogTitle>
-          </DialogHeader>
-          <p>Are you sure you want to delete <b>{docToDelete?.name}</b>?</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Delete Confirmation Dialog (now outside map) */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Document</DialogTitle>
+            </DialogHeader>
+            <p>Are you sure you want to delete <b>{docToDelete?.name}</b>?</p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Upload Document Sheet */}
@@ -345,7 +354,7 @@ const Documents = () => {
 
             <div className="space-y-2">
               <Label>File <span className="text-destructive">*</span></Label>
-              <div 
+              <div
                 className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -388,7 +397,7 @@ const Documents = () => {
             }}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleUpload}
               disabled={!documentName || !selectedFile || (isSuperAdmin && !selectedOrg)}
             >

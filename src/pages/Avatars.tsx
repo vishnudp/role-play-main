@@ -57,7 +57,7 @@ interface AvatarOption {
   image: string;
 }
 
- const AvatarFormContent = ({
+const AvatarFormContent = ({
   isEdit = false,
   formData,
   setFormData,
@@ -69,210 +69,210 @@ interface AvatarOption {
   responseLengthOptions,
   toggleAvatarSelection
 }: AvatarFormContentProps) => (
-    <div className="space-y-6 py-4">
-      {/* Organization Selection */}
-      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
-        <Label className="flex items-center gap-2 text-sm font-semibold">
-          <Building2 className="h-4 w-4 text-primary" />
-          Organization *
-        </Label>
-        <Select value={formData.organization} onValueChange={(value) => setFormData({ ...formData, organization: value })}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select organization" />
-          </SelectTrigger>
-          <SelectContent>
-            {organizations.map(org => (
-              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+  <div className="space-y-6 py-4">
+    {/* Organization Selection */}
+    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
+      <Label className="flex items-center gap-2 text-sm font-semibold">
+        <Building2 className="h-4 w-4 text-primary" />
+        Organization *
+      </Label>
+      <Select value={formData.organization} onValueChange={(value) => setFormData({ ...formData, organization: value })}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select organization" />
+        </SelectTrigger>
+        <SelectContent>
+          {organizations.map(org => (
+            <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
+    </div>
+
+    {/* A. Metadata Section */}
+    <div className="rounded-xl border border-border/50 overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 px-4 py-3 border-b border-border/50">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-blue-500/20">
+            <User className="h-4 w-4 text-blue-500" />
+          </div>
+          A. Metadata
+        </h3>
       </div>
-
-      {/* A. Metadata Section */}
-      <div className="rounded-xl border border-border/50 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 px-4 py-3 border-b border-border/50">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-blue-500/20">
-              <User className="h-4 w-4 text-blue-500" />
-            </div>
-            A. Metadata
-          </h3>
+      <div className="p-4 space-y-4 bg-card/50">
+        <div className="space-y-2">
+          <Label>Avatar Name *</Label>
+          <Input
+            placeholder="Enter avatar name"
+            value={formData.name || ""}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          />
         </div>
-        <div className="p-4 space-y-4 bg-card/50">
-          <div className="space-y-2">
-            <Label>Avatar Name *</Label>
-            <Input
-              placeholder="Enter avatar name"
-              value={formData.name || ""}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Avatar Description</Label>
-            <Textarea
-              placeholder="Describe this avatar's purpose"
-              value={formData.description || ""}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Persona</Label>
-            <Textarea
-              placeholder="Define the avatar's persona and background"
-              value={formData.persona || ""}
-              onChange={(e) => setFormData({ ...formData, persona: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Role</Label>
-            <Input
-              placeholder="e.g., Sales Representative, Support Agent"
-              value={formData.role || ""}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label>Avatar Description</Label>
+          <Textarea
+            placeholder="Describe this avatar's purpose"
+            value={formData.description || ""}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
         </div>
-      </div>
-
-      {/* B. Appearance Section */}
-      <div className="rounded-xl border border-border/50 overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 px-4 py-3 border-b border-border/50">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-purple-500/20">
-              <Palette className="h-4 w-4 text-purple-500" />
-            </div>
-            B. Appearance
-          </h3>
+        <div className="space-y-2">
+          <Label>Persona</Label>
+          <Textarea
+            placeholder="Define the avatar's persona and background"
+            value={formData.persona || ""}
+            onChange={(e) => setFormData({ ...formData, persona: e.target.value })}
+          />
         </div>
-        <div className="p-4 space-y-4 bg-card/50">
-          <div className="space-y-2">
-            <Label>Select Avatars <span className="text-muted-foreground text-xs">(Multi-select)</span></Label>
-            <p className="text-xs text-muted-foreground mb-3">
-              {(formData.selectedAvatarIds || []).length} avatar(s) selected
-            </p>
-            <div className="grid grid-cols-4 gap-3">
-              {avatarOptions?.map((avatar) => {
-                const isSelected = (formData.selectedAvatarIds || []).includes(avatar.id);
-                return (
-                  <div
-                    key={avatar.id}
-                    onClick={() => toggleAvatarSelection(avatar.id)}
-                    className={`relative cursor-pointer rounded-lg border-2 p-2 transition-all duration-200 hover:shadow-md ${isSelected
-                        ? "border-primary bg-primary/10 shadow-sm"
-                        : "border-border/50 hover:border-primary/50"
-                      }`}
-                  >
-                    <div className="aspect-square rounded-md overflow-hidden mb-2 bg-gray-200 flex items-center justify-center">
-  {avatar?.photo ? (
-    <img
-      src={`http://13.51.242.38:4000/${avatar.photo}`}
-      alt={avatar.avatar_name}
-      className="w-full h-full object-cover"
-      crossOrigin="anonymous"
-      onError={(e) => {
-        e.currentTarget.style.display = "none";
-      }}
-    />
-  ) : (
-    <span className="text-gray-500 text-sm font-medium">
-      {avatar?.avatar_name?.charAt(0)?.toUpperCase()}
-    </span>
-  )}
-</div>
-                    <p className="text-xs font-medium text-center truncate">{avatar.avatar_name}</p>
-                    {isSelected && (
-                      <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Background</Label>
-            <Select value={formData.background} onValueChange={(value) => setFormData({ ...formData, background: value })}>
-              <SelectTrigger><SelectValue placeholder="Select background" /></SelectTrigger>
-              <SelectContent>
-                {backgroundOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {/* C. Behavior Section */}
-      <div className="rounded-xl border border-border/50 overflow-hidden">
-        <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 px-4 py-3 border-b border-border/50">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-orange-500/20">
-              <Brain className="h-4 w-4 text-orange-500" />
-            </div>
-            C. Behavior
-          </h3>
-        </div>
-        <div className="p-4 space-y-4 bg-card/50">
-          <div className="space-y-2">
-            <Label>Personality</Label>
-            <Input
-              placeholder="e.g., Assertive, Empathetic, Analytical"
-              value={formData.personality || ""}
-              onChange={(e) => setFormData({ ...formData, personality: e.target.value })}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Strictness</Label>
-              <Select value={formData.strictness} onValueChange={(value) => setFormData({ ...formData, strictness: value })}>
-                <SelectTrigger><SelectValue placeholder="Select strictness" /></SelectTrigger>
-                <SelectContent>
-                  {strictnessOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Conversation Difficulty</Label>
-              <Select value={formData.conversationDifficulty} onValueChange={(value) => setFormData({ ...formData, conversationDifficulty: value })}>
-                <SelectTrigger><SelectValue placeholder="Select difficulty" /></SelectTrigger>
-                <SelectContent>
-                  {difficultyOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Knowledge Profile</Label>
-            <Input
-              placeholder="e.g., Enterprise Software Sales"
-              value={formData.knowledgeProfile || ""}
-              onChange={(e) => setFormData({ ...formData, knowledgeProfile: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Allowed Topics</Label>
-            <Textarea
-              placeholder="Topics the avatar can discuss"
-              value={formData.allowedTopics || ""}
-              onChange={(e) => setFormData({ ...formData, allowedTopics: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Response Length</Label>
-            <Select value={formData.responseLength} onValueChange={(value) => setFormData({ ...formData, responseLength: value })}>
-              <SelectTrigger><SelectValue placeholder="Select response length" /></SelectTrigger>
-              <SelectContent>
-                {responseLengthOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2">
+          <Label>Role</Label>
+          <Input
+            placeholder="e.g., Sales Representative, Support Agent"
+            value={formData.role || ""}
+            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          />
         </div>
       </div>
     </div>
-  );
+
+    {/* B. Appearance Section */}
+    <div className="rounded-xl border border-border/50 overflow-hidden">
+      <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 px-4 py-3 border-b border-border/50">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-purple-500/20">
+            <Palette className="h-4 w-4 text-purple-500" />
+          </div>
+          B. Appearance
+        </h3>
+      </div>
+      <div className="p-4 space-y-4 bg-card/50">
+        <div className="space-y-2">
+          <Label>Select Avatars <span className="text-muted-foreground text-xs">(Multi-select)</span></Label>
+          <p className="text-xs text-muted-foreground mb-3">
+            {(formData.selectedAvatarIds || []).length} avatar(s) selected
+          </p>
+          <div className="grid grid-cols-4 gap-3">
+            {avatarOptions?.map((avatar) => {
+              const isSelected = (formData.selectedAvatarIds || []).includes(avatar.id);
+              return (
+                <div
+                  key={avatar.id}
+                  onClick={() => toggleAvatarSelection(avatar.id)}
+                  className={`relative cursor-pointer rounded-lg border-2 p-2 transition-all duration-200 hover:shadow-md ${isSelected
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border/50 hover:border-primary/50"
+                    }`}
+                >
+                  <div className="aspect-square rounded-md overflow-hidden mb-2 bg-gray-200 flex items-center justify-center">
+                    {avatar?.photo ? (
+                      <img
+                        src={`http://13.51.242.38:4000/${avatar.photo}`}
+                        alt={avatar.avatar_name}
+                        className="w-full h-full object-cover"
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <span className="text-gray-500 text-sm font-medium">
+                        {avatar?.avatar_name?.charAt(0)?.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium text-center truncate">{avatar.avatar_name}</p>
+                  {isSelected && (
+                    <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Background</Label>
+          <Select value={formData.background} onValueChange={(value) => setFormData({ ...formData, background: value })}>
+            <SelectTrigger><SelectValue placeholder="Select background" /></SelectTrigger>
+            <SelectContent>
+              {backgroundOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+
+    {/* C. Behavior Section */}
+    <div className="rounded-xl border border-border/50 overflow-hidden">
+      <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 px-4 py-3 border-b border-border/50">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-orange-500/20">
+            <Brain className="h-4 w-4 text-orange-500" />
+          </div>
+          C. Behavior
+        </h3>
+      </div>
+      <div className="p-4 space-y-4 bg-card/50">
+        <div className="space-y-2">
+          <Label>Personality</Label>
+          <Input
+            placeholder="e.g., Assertive, Empathetic, Analytical"
+            value={formData.personality || ""}
+            onChange={(e) => setFormData({ ...formData, personality: e.target.value })}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Strictness</Label>
+            <Select value={formData.strictness} onValueChange={(value) => setFormData({ ...formData, strictness: value })}>
+              <SelectTrigger><SelectValue placeholder="Select strictness" /></SelectTrigger>
+              <SelectContent>
+                {strictnessOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Conversation Difficulty</Label>
+            <Select value={formData.conversationDifficulty} onValueChange={(value) => setFormData({ ...formData, conversationDifficulty: value })}>
+              <SelectTrigger><SelectValue placeholder="Select difficulty" /></SelectTrigger>
+              <SelectContent>
+                {difficultyOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Knowledge Profile</Label>
+          <Input
+            placeholder="e.g., Enterprise Software Sales"
+            value={formData.knowledgeProfile || ""}
+            onChange={(e) => setFormData({ ...formData, knowledgeProfile: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Allowed Topics</Label>
+          <Textarea
+            placeholder="Topics the avatar can discuss"
+            value={formData.allowedTopics || ""}
+            onChange={(e) => setFormData({ ...formData, allowedTopics: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Response Length</Label>
+          <Select value={formData.responseLength} onValueChange={(value) => setFormData({ ...formData, responseLength: value })}>
+            <SelectTrigger><SelectValue placeholder="Select response length" /></SelectTrigger>
+            <SelectContent>
+              {responseLengthOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const Avatars = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -318,74 +318,74 @@ const Avatars = () => {
 
   console.log('backgroundOptions--', metaData)
 
-   const loadAvatarConfigurationsData = async () => {
-      try {
-        const response = await fetchAvatarConfigurations();
-        console.log('avatar response--', response)
-        if (response) {
+  const loadAvatarConfigurationsData = async () => {
+    try {
+      const response = await fetchAvatarConfigurations();
+      console.log('avatar response--', response)
+      if (response) {
 
-          setaAvatarOptions(response); // <-- updates all constants
-        }
-      } catch (error) {
-        console.error("Failed to fetch metadata:", error);
-        setaAvatarOptions({ constants: {}, schema: { enums: {} } });
+        setaAvatarOptions(response); // <-- updates all constants
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch metadata:", error);
+      setaAvatarOptions({ constants: {}, schema: { enums: {} } });
+    }
+  };
 
-    const loadMetaData = async () => {
-      try {
-        const response = await fetchMetaData();
-        console.log(' response--', response)
-        if (response) {
+  const loadMetaData = async () => {
+    try {
+      const response = await fetchMetaData();
+      console.log(' response--', response)
+      if (response) {
 
-          setMetaData(response); // <-- updates all constants
-        }
-      } catch (error) {
-        console.error("Failed to fetch metadata:", error);
-        setMetaData({ constants: {}, schema: { enums: {} } });
+        setMetaData(response); // <-- updates all constants
       }
-    };
-    const loadAvatars = async () => {
-      try {
-        await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
-        const apiData = await fetchAvatars();
+    } catch (error) {
+      console.error("Failed to fetch metadata:", error);
+      setMetaData({ constants: {}, schema: { enums: {} } });
+    }
+  };
+  const loadAvatars = async () => {
+    try {
+      await fetchOrganizations()
+        .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
+        .catch(() => setOrganizations([]));
+      const apiData = await fetchAvatars();
 
-        // Map API response to AvatarData
-        const mappedAvatars: AvatarData[] = apiData.map((item: any, index: number) => ({
-          id: item.id, // generate numeric ID for local state usage
-          name: item.name || "Untitled Avatar",
-          description: item.description || "-",
-          persona: item.persona || "-",
-          role: item.role_type || "-",
-          selectedAvatarIds: item.avatarConfigs?.map((cfg: any) => cfg.avatarConfig.id) || [],
-          background: item.background?.replace("_", " ") || "Modern Office",
-          personality: item.personality || "-",
-          strictness: item.strictness || "Medium",
-          knowledgeProfile: item.knowledge_profile || "-",
-          allowedTopics: item.allow_topics || "-",
-          conversationDifficulty: item.conversational_difficulty || "Intermediate",
-          responseLength: item.response_length || "Medium",
-          organization: item.organization_id || "Unknown Org",
-          scenarios: 0,
-          documents: 0,
-          uses: 0,
-          status: item.avatarConfigs?.some((cfg: any) => cfg.avatarConfig.status === "ACTIVE") ? "Active" : "Draft",
-          color: "from-blue-500 to-cyan-500" // optional default gradient
-        }));
+      // Map API response to AvatarData
+      const mappedAvatars: AvatarData[] = apiData.map((item: any, index: number) => ({
+        id: item.id, // generate numeric ID for local state usage
+        name: item.name || "Untitled Avatar",
+        description: item.description || "-",
+        persona: item.persona || "-",
+        role: item.role_type || "-",
+        selectedAvatarIds: item.avatarConfigs?.map((cfg: any) => cfg.avatarConfig.id) || [],
+        background: item.background?.replace("_", " ") || "Modern Office",
+        personality: item.personality || "-",
+        strictness: item.strictness || "Medium",
+        knowledgeProfile: item.knowledge_profile || "-",
+        allowedTopics: item.allow_topics || "-",
+        conversationDifficulty: item.conversational_difficulty || "Intermediate",
+        responseLength: item.response_length || "Medium",
+        organization: item.organization_id || "Unknown Org",
+        scenarios: 0,
+        documents: 0,
+        uses: 0,
+        status: item.avatarConfigs?.some((cfg: any) => cfg.avatarConfig.status === "ACTIVE") ? "Active" : "Draft",
+        color: "from-blue-500 to-cyan-500" // optional default gradient
+      }));
 
-        setAvatars(mappedAvatars);
-      } catch (error) {
-        console.error("Failed to load avatars:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setAvatars(mappedAvatars);
+    } catch (error) {
+      console.error("Failed to load avatars:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
 
-   
+
     loadMetaData();
     loadAvatarConfigurationsData();
     loadAvatars();
@@ -535,7 +535,7 @@ const Avatars = () => {
     setIsDeleteDialogOpen(true);
   };
 
- 
+
 
   const AvatarViewContent = ({ avatar }: { avatar: AvatarData }) => (
     <div className="space-y-6 py-4">
@@ -590,29 +590,29 @@ const Avatars = () => {
 
               return (
                 <div key={id} className="flex items-center gap-2 bg-muted/40 px-2 py-1 rounded-md">
-  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
-    {config?.photo ? (
-      <img
-        src={`http://13.51.242.38:4000/${config.photo}`}
-        alt={config.avatar_name}
-        className="w-full h-full object-cover"
-        crossOrigin="anonymous"
-        onError={(e) => {
-          e.currentTarget.style.display = "none";
-        }}
-      />
-    ) : (
-      <span className="text-xs font-semibold text-gray-500 leading-none">
-        {config?.avatar_name?.charAt(0)?.toUpperCase()}
-      </span>
-    )}
-  </div>
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
+                    {config?.photo ? (
+                      <img
+                        src={`http://13.51.242.38:4000/${config.photo}`}
+                        alt={config.avatar_name}
+                        className="w-full h-full object-cover"
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xs font-semibold text-gray-500 leading-none">
+                        {config?.avatar_name?.charAt(0)?.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
 
-  <span className="text-xs font-medium">
-    {config.avatar_name}
-  </span>
-</div>
-                
+                  <span className="text-xs font-medium">
+                    {config.avatar_name}
+                  </span>
+                </div>
+
               );
             })
           ) : (
@@ -708,94 +708,103 @@ const Avatars = () => {
         </div>
 
         {/* Avatars Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredAvatars.map((avatar) => (
-            <Card key={avatar.id} className="border-border/50 hover:border-primary/30 hover:shadow-xl transition-all duration-300 group overflow-hidden">
-              <div className={`h-2 bg-gradient-to-r ${avatar.color}`}></div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+              <p className="text-sm text-muted-foreground">Loading avatars...</p>
+            </div>
+          </div>
+        ) :
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {filteredAvatars.map((avatar) => (
+              <Card key={avatar.id} className="border-border/50 hover:border-primary/30 hover:shadow-xl transition-all duration-300 group overflow-hidden">
+                <div className={`h-2 bg-gradient-to-r ${avatar.color}`}></div>
 
-              <CardHeader className="pb-4">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-16 w-16 border-2 border-border/50">
-                    <AvatarFallback className={`bg-gradient-to-br ${avatar.color} text-white text-xl font-bold`}>
-                      <Bot className="h-8 w-8" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-xl group-hover:text-primary transition-colors">{avatar.name}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">{getOrganizationName(organizations, avatar.organization)}</p>
-                        <Badge variant={avatar.status === "Active" ? "default" : "secondary"} className="mt-2">
-                          {avatar.status}
-                        </Badge>
-                      </div>
-                      {/* <div className="text-right">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-16 w-16 border-2 border-border/50">
+                      <AvatarFallback className={`bg-gradient-to-br ${avatar.color} text-white text-xl font-bold`}>
+                        <Bot className="h-8 w-8" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-xl group-hover:text-primary transition-colors">{avatar.name}</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">{getOrganizationName(organizations, avatar.organization)}</p>
+                          <Badge variant={avatar.status === "Active" ? "default" : "secondary"} className="mt-2">
+                            {avatar.status}
+                          </Badge>
+                        </div>
+                        {/* <div className="text-right">
                         <p className="text-3xl font-bold text-foreground">{avatar.uses}</p>
                         <p className="text-xs text-muted-foreground font-medium">Total Uses</p>
                       </div> */}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
+                </CardHeader>
 
-              <CardContent className="space-y-5">
-                {/* Description */}
-                <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
-                  <p className="text-sm text-foreground">{avatar.description}</p>
-                </div>
-
-                {/* Selected Avatars & Background */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <User className="h-3.5 w-3.5 text-primary" />
-                      <p className="text-xs text-muted-foreground font-medium">Avatars</p>
-                    </div>
-                    <p className="text-sm font-semibold text-foreground">{avatar.selectedAvatarIds.length} selected</p>
+                <CardContent className="space-y-5">
+                  {/* Description */}
+                  <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
+                    <p className="text-sm text-foreground">{avatar.description}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Globe className="h-3.5 w-3.5 text-accent" />
-                      <p className="text-xs text-muted-foreground font-medium">Background</p>
-                    </div>
-                    <p className="text-sm font-semibold text-foreground">{avatar.background}</p>
-                  </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-2 border-t border-border/30">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditSheet(avatar)}
-                    className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
-                  >
-                    <Settings className="h-3.5 w-3.5 mr-2" />
-                    Configure
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openViewSheet(avatar)}
-                    className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
-                  >
-                    <Eye className="h-3.5 w-3.5 mr-2" />
-                    View Details
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openDeleteDialog(avatar)}
-                    className="h-9 text-sm border-destructive/50 text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  {/* Selected Avatars & Background */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <User className="h-3.5 w-3.5 text-primary" />
+                        <p className="text-xs text-muted-foreground font-medium">Avatars</p>
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">{avatar.selectedAvatarIds.length} selected</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Globe className="h-3.5 w-3.5 text-accent" />
+                        <p className="text-xs text-muted-foreground font-medium">Background</p>
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">{avatar.background}</p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2 border-t border-border/30">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditSheet(avatar)}
+                      className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Settings className="h-3.5 w-3.5 mr-2" />
+                      Configure
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openViewSheet(avatar)}
+                      className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-2" />
+                      View Details
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDeleteDialog(avatar)}
+                      className="h-9 text-sm border-destructive/50 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        }
       </div>
 
       {/* Create Avatar Sheet */}
@@ -806,16 +815,16 @@ const Avatars = () => {
             <SheetDescription>Configure your AI avatar with metadata, appearance, voice, and behavior settings.</SheetDescription>
           </SheetHeader>
           <AvatarFormContent
-  formData={formData}
-  setFormData={setFormData}
-  organizations={organizations}
-  avatarOptions={avatarOptions}
-  backgroundOptions={backgroundOptions}
-  strictnessOptions={strictnessOptions}
-  difficultyOptions={difficultyOptions}
-  responseLengthOptions={responseLengthOptions}
-  toggleAvatarSelection={toggleAvatarSelection}
-/>
+            formData={formData}
+            setFormData={setFormData}
+            organizations={organizations}
+            avatarOptions={avatarOptions}
+            backgroundOptions={backgroundOptions}
+            strictnessOptions={strictnessOptions}
+            difficultyOptions={difficultyOptions}
+            responseLengthOptions={responseLengthOptions}
+            toggleAvatarSelection={toggleAvatarSelection}
+          />
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsCreateSheetOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateAvatar}>Create Avatar</Button>
@@ -831,17 +840,17 @@ const Avatars = () => {
             <SheetDescription>Update your AI avatar configuration.</SheetDescription>
           </SheetHeader>
           <AvatarFormContent
-  isEdit
-  formData={formData}
-  setFormData={setFormData}
-  organizations={organizations}
-  avatarOptions={avatarOptions}
-  backgroundOptions={backgroundOptions}
-  strictnessOptions={strictnessOptions}
-  difficultyOptions={difficultyOptions}
-  responseLengthOptions={responseLengthOptions}
-  toggleAvatarSelection={toggleAvatarSelection}
-/>
+            isEdit
+            formData={formData}
+            setFormData={setFormData}
+            organizations={organizations}
+            avatarOptions={avatarOptions}
+            backgroundOptions={backgroundOptions}
+            strictnessOptions={strictnessOptions}
+            difficultyOptions={difficultyOptions}
+            responseLengthOptions={responseLengthOptions}
+            toggleAvatarSelection={toggleAvatarSelection}
+          />
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>Cancel</Button>
             <Button onClick={handleEditAvatar}>Save Changes</Button>

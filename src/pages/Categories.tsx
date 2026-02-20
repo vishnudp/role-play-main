@@ -98,17 +98,17 @@ const Categories = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ type: "category" | "subCategory"; categoryId: string; subCategoryId?: string; name: string } | null>(null);
 
   const loadCategories = async () => {
-  setLoading(true);
-  try {
-    const cats = await fetchCategories();
-    setCategories(Array.isArray(cats) ? cats : []);
-  } catch (err) {
-    setCategories([]);
-    toast.error("Failed to fetch categories");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const cats = await fetchCategories();
+      setCategories(Array.isArray(cats) ? cats : []);
+    } catch (err) {
+      setCategories([]);
+      toast.error("Failed to fetch categories");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadCategories()
@@ -150,39 +150,39 @@ const Categories = () => {
 
   // Category handlers
   const handleAddCategory = async () => {
-   if (!categoryForm.name) return toast.error("Please enter a category name");
+    if (!categoryForm.name) return toast.error("Please enter a category name");
 
-  try {
-    const newCategory = await addCategory({
-      name: categoryForm.name,
-      description: categoryForm.description,
-    });
-    setCategories([...categories, { ...newCategory, children: [], is_active: "Active" }]);
-    resetCategoryForm();
-    setIsCategorySheetOpen(false);
-    toast.success("Category created successfully");
-  } catch (err) {
-    toast.error("Failed to create category");
-  }
+    try {
+      const newCategory = await addCategory({
+        name: categoryForm.name,
+        description: categoryForm.description,
+      });
+      setCategories([...categories, { ...newCategory, children: [], is_active: "Active" }]);
+      resetCategoryForm();
+      setIsCategorySheetOpen(false);
+      toast.success("Category created successfully");
+    } catch (err) {
+      toast.error("Failed to create category");
+    }
   };
 
-  
-const handleEditCategory = async () => {
-  if (!selectedCategory || !categoryForm.name) return toast.error("Please enter a category name");
 
-  try {
-    const updated = await editCategory(selectedCategory.id, {
-      name: categoryForm.name,
-      description: categoryForm.description,
-    });
-    setCategories(categories.map(c => c.id === selectedCategory.id ? { ...c, ...updated } : c));
-    resetCategoryForm();
-    setIsCategorySheetOpen(false);
-    toast.success("Category updated successfully");
-  } catch (err) {
-    toast.error("Failed to update category");
-  }
-};
+  const handleEditCategory = async () => {
+    if (!selectedCategory || !categoryForm.name) return toast.error("Please enter a category name");
+
+    try {
+      const updated = await editCategory(selectedCategory.id, {
+        name: categoryForm.name,
+        description: categoryForm.description,
+      });
+      setCategories(categories.map(c => c.id === selectedCategory.id ? { ...c, ...updated } : c));
+      resetCategoryForm();
+      setIsCategorySheetOpen(false);
+      toast.success("Category updated successfully");
+    } catch (err) {
+      toast.error("Failed to update category");
+    }
+  };
 
   const handleDeleteCategory = (categoryId: string) => {
     setCategories(categories.filter(c => c.id !== categoryId));
@@ -202,56 +202,56 @@ const handleEditCategory = async () => {
 
   // SubCategory handlers
   const handleAddSubCategory = async () => {
-  if (!subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
+    if (!subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
 
-  try {
-    const newSub = await addSubCategory({
-      name: subCategoryForm.name,
-      description: subCategoryForm.description,
-      parent_id: parentCategoryId,
-    });
+    try {
+      const newSub = await addSubCategory({
+        name: subCategoryForm.name,
+        description: subCategoryForm.description,
+        parent_id: parentCategoryId,
+      });
 
-    setCategories(categories.map(c =>
-      c.id === parentCategoryId
-        ? { ...c, children: [...c.children, newSub] }
-        : c
-    ));
+      setCategories(categories.map(c =>
+        c.id === parentCategoryId
+          ? { ...c, children: [...c.children, newSub] }
+          : c
+      ));
 
-    if (!expandedCategories.includes(parentCategoryId)) setExpandedCategories([...expandedCategories, parentCategoryId]);
+      if (!expandedCategories.includes(parentCategoryId)) setExpandedCategories([...expandedCategories, parentCategoryId]);
 
-    resetSubCategoryForm();
-    setIsSubCategorySheetOpen(false);
-    toast.success("Subcategory created successfully");
-  } catch (err) {
-    toast.error("Failed to create subcategory");
-  }
-};
+      resetSubCategoryForm();
+      setIsSubCategorySheetOpen(false);
+      toast.success("Subcategory created successfully");
+    } catch (err) {
+      toast.error("Failed to create subcategory");
+    }
+  };
 
   const handleEditSubCategory = async () => {
-  if (!selectedSubCategory || !subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
+    if (!selectedSubCategory || !subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
 
-  try {
-    const updated = await editSubCategory(selectedSubCategory.id, {
-      name: subCategoryForm.name,
-      description: subCategoryForm.description,
-    });
+    try {
+      const updated = await editSubCategory(selectedSubCategory.id, {
+        name: subCategoryForm.name,
+        description: subCategoryForm.description,
+      });
 
-    setCategories(categories.map(c =>
-      c.id === parentCategoryId
-        ? {
+      setCategories(categories.map(c =>
+        c.id === parentCategoryId
+          ? {
             ...c,
             children: c.children.map(sc => sc.id === selectedSubCategory.id ? { ...sc, ...updated } : sc)
           }
-        : c
-    ));
+          : c
+      ));
 
-    resetSubCategoryForm();
-    setIsSubCategorySheetOpen(false);
-    toast.success("Subcategory updated successfully");
-  } catch (err) {
-    toast.error("Failed to update subcategory");
-  }
-};
+      resetSubCategoryForm();
+      setIsSubCategorySheetOpen(false);
+      toast.success("Subcategory updated successfully");
+    } catch (err) {
+      toast.error("Failed to update subcategory");
+    }
+  };
 
   const confirmDelete = (type: "category" | "subCategory", categoryId: string, name: string, subCategoryId?: string) => {
     setDeleteTarget({ type, categoryId, subCategoryId, name });
@@ -267,25 +267,25 @@ const handleEditCategory = async () => {
     toast.success("Subcategory deleted successfully");
   };
 
-const handleConfirmDelete = async () => {
-  if (!deleteTarget) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
 
-  setIsDeleteDialogOpen(false);
+    setIsDeleteDialogOpen(false);
 
-  try {
-    if (deleteTarget.type === "category") {
-       await deleteCategory(deleteTarget.categoryId);
-      
+    try {
+      if (deleteTarget.type === "category") {
+        await deleteCategory(deleteTarget.categoryId);
+
         toast.success(`Category "${deleteTarget.name}" deleted successfully`);
         setTimeout(() => loadCategories(), 200);
         // Remove category and remove it from expanded state
         setCategories(prev => prev.filter(c => c.id !== deleteTarget.categoryId));
         setExpandedCategories(prev => prev.filter(id => id !== deleteTarget.categoryId));
-        
-      
-    } else if (deleteTarget.type === "subCategory") {
-      await deleteSubCategory(deleteTarget.subCategoryId!);
-      
+
+
+      } else if (deleteTarget.type === "subCategory") {
+        await deleteSubCategory(deleteTarget.subCategoryId!);
+
         toast.success(`Subcategory "${deleteTarget.name}" deleted successfully`);
         setCategories(prev =>
           prev.map(c =>
@@ -295,14 +295,14 @@ const handleConfirmDelete = async () => {
           )
         );
         setTimeout(() => loadCategories(), 200);
-      
+
+      }
+    } catch (err) {
+      toast.error("Failed to delete");
+    } finally {
+      setDeleteTarget(null);
     }
-  } catch (err) {
-    toast.error("Failed to delete");
-  } finally {
-    setDeleteTarget(null);
-  }
-};
+  };
 
 
 
@@ -404,166 +404,175 @@ const handleConfirmDelete = async () => {
           </CardHeader>
           <CardContent>
             <div className="rounded-md border border-border/50">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="font-medium w-[40px]"></TableHead>
-                    <TableHead className="font-medium">Category</TableHead>
-                    <TableHead className="font-medium">Subcategories</TableHead>
-                    <TableHead className="font-medium">Status</TableHead>
-                    <TableHead className="font-medium text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCategories.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                        <FolderTree className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                        <p>No categories found</p>
-                      </TableCell>
+              {loading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+                    <p className="text-sm text-muted-foreground">Loading categories...</p>
+                  </div>
+                </div>
+              ) :
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead className="font-medium w-[40px]"></TableHead>
+                      <TableHead className="font-medium">Category</TableHead>
+                      <TableHead className="font-medium">Subcategories</TableHead>
+                      <TableHead className="font-medium">Status</TableHead>
+                      <TableHead className="font-medium text-right">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredCategories.map((category) => (
-                      <Collapsible key={category.id} asChild open={expandedCategories.includes(category.id)}>
-                        <>
-                          <TableRow className="group">
-                            <TableCell>
-                              <CollapsibleTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => toggleExpanded(category.id)}
-                                >
-                                  {expandedCategories.includes(category.id) ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </CollapsibleTrigger>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                  <FolderTree className="h-5 w-5 text-primary" />
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCategories.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <FolderTree className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No categories found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredCategories.map((category) => (
+                        <Collapsible key={category.id} asChild open={expandedCategories.includes(category.id)}>
+                          <>
+                            <TableRow className="group">
+                              <TableCell>
+                                <CollapsibleTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => toggleExpanded(category.id)}
+                                  >
+                                    {expandedCategories.includes(category.id) ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </CollapsibleTrigger>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <FolderTree className="h-5 w-5 text-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-foreground">{category.name}</p>
+                                    <p className="text-sm text-muted-foreground line-clamp-1">
+                                      {category.description || "No description"}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-medium text-foreground">{category.name}</p>
-                                  <p className="text-sm text-muted-foreground line-clamp-1">
-                                    {category.description || "No description"}
-                                  </p>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="font-normal">
+                                  {category.children.length} subcategories
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={category.is_active ? "default" : "secondary"}>
+                                  {category.is_active ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs"
+                                    onClick={() => openAddSubCategorySheet(category.id)}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add Sub
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        className="gap-2 cursor-pointer"
+                                        onClick={() => openEditCategorySheet(category)}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                        onClick={() => confirmDelete("category", category.id, category.name)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className="font-normal">
-                                {category.children.length} subcategories
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={category.is_active ? "default" : "secondary"}>
-                                {category.is_active ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 text-xs"
-                                  onClick={() => openAddSubCategorySheet(category.id)}
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Add Sub
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      className="gap-2 cursor-pointer"
-                                      onClick={() => openEditCategorySheet(category)}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                      onClick={() => confirmDelete("category", category.id, category.name)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                          <CollapsibleContent asChild>
-                            <>
-                              {category.children.map((subCategory) => (
-                                <TableRow key={subCategory.id} className="bg-muted/10">
-                                  <TableCell></TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-3 pl-6">
-                                      <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                                        <Layers className="h-4 w-4 text-accent" />
+                              </TableCell>
+                            </TableRow>
+                            <CollapsibleContent asChild>
+                              <>
+                                {category.children.map((subCategory) => (
+                                  <TableRow key={subCategory.id} className="bg-muted/10">
+                                    <TableCell></TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-3 pl-6">
+                                        <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                                          <Layers className="h-4 w-4 text-accent" />
+                                        </div>
+                                        <div>
+                                          <p className="font-medium text-foreground">{subCategory.name}</p>
+                                          <p className="text-sm text-muted-foreground line-clamp-1">
+                                            {subCategory.description || "No description"}
+                                          </p>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <p className="font-medium text-foreground">{subCategory.name}</p>
-                                        <p className="text-sm text-muted-foreground line-clamp-1">
-                                          {subCategory.description || "No description"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground">—</span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant={subCategory.is_active ? "default" : "secondary"}>
-                                      {subCategory.is_active ? "Active" : "Inactive"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                          <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                          className="gap-2 cursor-pointer"
-                                          onClick={() => openEditSubCategorySheet(category, subCategory)}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                          Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                          onClick={() => confirmDelete("subCategory", category.id, subCategory.name, subCategory.id)}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </>
-                          </CollapsibleContent>
-                        </>
-                      </Collapsible>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="text-sm text-muted-foreground">—</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant={subCategory.is_active ? "default" : "secondary"}>
+                                        {subCategory.is_active ? "Active" : "Inactive"}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem
+                                            className="gap-2 cursor-pointer"
+                                            onClick={() => openEditSubCategorySheet(category, subCategory)}
+                                          >
+                                            <Pencil className="h-4 w-4" />
+                                            Edit
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                            onClick={() => confirmDelete("subCategory", category.id, subCategory.name, subCategory.id)}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                            Delete
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </>
+                            </CollapsibleContent>
+                          </>
+                        </Collapsible>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              }
             </div>
           </CardContent>
         </Card>
@@ -711,24 +720,24 @@ const handleConfirmDelete = async () => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {deleteTarget?.type === "category"
-              ? `This will permanently delete the category "${deleteTarget.name}" and all its subcategories.`
-              : `This will permanently delete the subcategory "${deleteTarget?.name}".`}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-          <Button variant="destructive" onClick={handleConfirmDelete}>
-            Delete
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.type === "category"
+                ? `This will permanently delete the category "${deleteTarget.name}" and all its subcategories.`
+                : `This will permanently delete the subcategory "${deleteTarget?.name}".`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
