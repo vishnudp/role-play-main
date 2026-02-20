@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,21 +7,477 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Edit, Trash2, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Shield, FileText, Plus, MoreHorizontal, Edit, Pencil, Trash2, Search, ChevronDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { fetchAvatarConfigurations, fetchCertificate, fetchOrganizations, fetchRolePlays } from "../api/apiService";
+import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, createCertificate, updateCertificateApi, deleteCertificate } from "../api/apiService";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
 interface Certification {
-  id: number;
+  id: string;
   name: string;
-  organization: string;
-  roleplays: string[];
-  minimumScore: number;
-  badgeUrl: string | null;
+  organizations: any[];
+  rolePlays: any[];
+  min_score: number;
+  icons?: any[];
 }
+
+interface CertificationFormProps {
+  formData: typeof FormData;
+  setFormData: React.Dispatch<React.SetStateAction<typeof FormData>>;
+  organizations: { id: number; name: string }[];
+  allRoleplays: { id: number; name: string; organization: string }[];
+  icons: { id: number; name: string }[]; // <-- add this
+}
+
+const CertificationForm = ({ formData, setFormData, organizations, allRoleplays, icons }: CertificationFormProps) => {
+
+  const [isOrgPopoverOpen, setIsOrgPopoverOpen] = useState(false);
+  const [isRolePlayPopoverOpen, setIsRolePlayPopoverOpen] = useState(false);
+  const [isIconPopoverOpen, setIsIconPopoverOpen] = useState(false);
+
+  // Search queries
+  const [orgSearchQuery, setOrgSearchQuery] = useState("");
+  const [rolePlaySearchQuery, setRolePlaySearchQuery] = useState("");
+  const [iconSearchQuery, setIconSearchQuery] = useState("");
+
+  const toggleOrganization = (id: number) => {
+    const idStr = id.toString();
+    if (formData.organization_ids.includes(idStr)) {
+      setFormData({
+        ...formData,
+        organization_ids: formData.organization_ids.filter((orgId: string) => orgId !== idStr),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        organization_ids: [...formData.organization_ids, idStr],
+      });
+    }
+  };
+
+  const toggleRolePlay = (id: number) => {
+    const idStr = id.toString();
+    if (formData.role_play_ids.includes(idStr)) {
+      setFormData({
+        ...formData,
+        role_play_ids: formData.role_play_ids.filter((rpId: string) => rpId !== idStr),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        role_play_ids: [...formData.role_play_ids, idStr],
+      });
+    }
+  };
+
+  const toggleIcon = (id: number) => {
+    const idStr = id.toString();
+    const current = formData.icon_ids || [];
+    if (current.includes(idStr)) {
+      setFormData({
+        ...formData,
+        icon_ids: current.filter((iconId) => iconId !== idStr),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        icon_ids: [...current, idStr],
+      });
+    }
+  };
+
+  const removeOrganization = (id: string) => {
+    setFormData({
+      ...formData,
+      organization_ids: formData.organization_ids.filter((orgId: string) => orgId !== id),
+    });
+  };
+
+  const removeRolePlay = (id: string) => {
+    setFormData({
+      ...formData,
+      role_play_ids: formData.role_play_ids.filter((rpId: string) => rpId !== id),
+    });
+  };
+
+  const removeIcon = (id: string) => {
+    setFormData({
+      ...formData,
+      icon_ids: formData.icon_ids.filter((iconId: string) => iconId !== id),
+    });
+  };
+
+  const filteredOrganizations = organizations.filter((org) =>
+    org.name.toLowerCase().includes(orgSearchQuery.toLowerCase())
+  );
+
+  const filteredRolePlays = allRoleplays.filter((rp) =>
+    rp.name.toLowerCase().includes(rolePlaySearchQuery.toLowerCase())
+  );
+
+  const filteredIcons = icons.filter((icon) =>
+    icon.avatar_name.toLowerCase().includes(iconSearchQuery.toLowerCase())
+  );
+
+  // const getFilteredRoleplays = () => {
+  //   if (!formData.organizationId) return [];
+  //   return allRoleplays.filter(rp => rp.organization === formData.organizationId);
+  // };
+
+  // const filteredRoleplays = getFilteredRoleplays();
+
+  const handleRoleplayToggle = (roleplayId: string) => {
+    if (formData.role_play_ids.includes(roleplayId)) {
+      setFormData({ ...formData, role_play_ids: formData.role_play_ids.filter(id => id !== roleplayId) });
+    } else {
+      setFormData({ ...formData, role_play_ids: [...formData.role_play_ids, roleplayId] });
+    }
+  };
+
+
+
+
+  return (
+    <div className="space-y-6 py-6">
+      {/* Organization */}
+      <div className="space-y-2">
+        <Label>Organizations</Label>
+        <Popover open={isOrgPopoverOpen} onOpenChange={setIsOrgPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className={cn(
+                "w-full h-auto min-h-11 justify-between text-left font-normal border-border/50",
+                formData.organization_ids.length === 0 && "text-muted-foreground"
+              )}
+            >
+              <div className="flex flex-wrap gap-1 flex-1">
+                {formData.organization_ids.length === 0 ? (
+                  <span>Select organizations</span>
+                ) : (
+                  formData.organization_ids.map((orgId) => {
+                    const org = organizations.find((o) => o.id.toString() === orgId);
+                    return (
+                      org && (
+                        <Badge
+                          key={orgId}
+                          variant="secondary"
+                          className="mr-1 mb-1"
+                        >
+                          {org.name}
+                          <button
+                            className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeOrganization(orgId);
+                            }}
+                          >
+                            <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        </Badge>
+                      )
+                    );
+                  })
+                )}
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-2" align="start">
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search organizations..."
+                  className="pl-10 h-9"
+                  value={orgSearchQuery}
+                  onChange={(e) => setOrgSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="max-h-[200px] overflow-y-auto space-y-1">
+                {filteredOrganizations.map((org) => (
+                  <div
+                    key={org.id}
+                    className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-md cursor-pointer"
+                    onClick={() => toggleOrganization(org.id)}
+                  >
+                    <Checkbox
+                      checked={formData.organization_ids.includes(org.id.toString())}
+                      onCheckedChange={() => toggleOrganization(org.id)}
+                    />
+                    <div className="text-sm">{org.name}</div>
+                  </div>
+                ))}
+                {filteredOrganizations.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">No organizations found</p>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Certificate Name */}
+      <div className="space-y-2">
+        <Label htmlFor="certName">Certificate Name <span className="text-destructive">*</span></Label>
+        <Input
+          id="certName"
+          placeholder="Enter certificate name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="h-11 bg-background border-border/50"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="instructions">Instructions Name <span className="text-destructive">*</span></Label>
+        <Input
+          id="instructions"
+          placeholder="Enter certification instructions"
+          value={formData.instructions}
+          onChange={(e) =>
+            setFormData({ ...formData, instructions: e.target.value })
+          }
+          className="h-11 bg-background border-border/50"
+        />
+      </div>
+
+      {/* Roleplays Multi-select */}
+      <div className="space-y-2">
+        <Label>Roleplays</Label>
+        <Popover open={isRolePlayPopoverOpen} onOpenChange={setIsRolePlayPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className={cn(
+                "w-full h-auto min-h-11 justify-between text-left font-normal border-border/50",
+                formData.role_play_ids.length === 0 && "text-muted-foreground"
+              )}
+            >
+              <div className="flex flex-wrap gap-1 flex-1">
+                {formData.role_play_ids.length === 0 ? (
+                  <span>Select Role Plays</span>
+                ) : (
+                  formData.role_play_ids.map((roleplayid) => {
+                    const roleplay = allRoleplays.find((o) => o.id.toString() === roleplayid);
+                    return (
+                      roleplay && (
+                        <Badge
+                          key={roleplayid}
+                          variant="secondary"
+                          className="mr-1 mb-1"
+                        >
+                          {roleplay.name}
+                          <button
+                            className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeRolePlay(roleplayid);
+                            }}
+                          >
+                            <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        </Badge>
+                      )
+                    );
+                  })
+                )}
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-2" align="start">
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search role plays..."
+                  className="pl-10 h-9"
+                  value={rolePlaySearchQuery}
+                  onChange={(e) => setRolePlaySearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="max-h-[200px] overflow-y-auto space-y-1">
+                {filteredRolePlays.map((roleplay) => (
+                  <div
+                    key={roleplay.id}
+                    className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-md cursor-pointer"
+                    onClick={() => toggleRolePlay(roleplay.id)}
+                  >
+                    <Checkbox
+                      checked={formData.role_play_ids.includes(roleplay.id.toString())}
+                      onCheckedChange={() => toggleRolePlay(roleplay.id)}
+                    />
+                    <div className="text-sm">{roleplay.name}</div>
+                  </div>
+                ))}
+                {filteredRolePlays.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">No role plays found</p>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Minimum Score Slider */}
+      <div className="space-y-4">
+        <Label>Minimum Score Needed</Label>
+        <div className="px-2">
+          <Slider
+            value={formData.minimumScore}
+            onValueChange={(value) => setFormData({ ...formData, minimumScore: value })}
+            max={10}
+            min={0}
+            step={1}
+            className="w-full"
+          />
+          <div className="flex justify-between mt-2">
+            <span className="text-xs text-muted-foreground">0</span>
+            <span className="text-sm font-medium text-primary">{formData.minimumScore[0]}</span>
+            <span className="text-xs text-muted-foreground">10</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Badge */}
+      <div className="space-y-2">
+        <Label>Icons</Label>
+        <Popover open={isIconPopoverOpen} onOpenChange={setIsIconPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className={cn(
+                "w-full h-auto min-h-11 justify-between text-left font-normal border-border/50",
+                formData.icon_ids?.length === 0 && "text-muted-foreground"
+              )}
+            >
+              <div className="flex flex-wrap gap-1 flex-1">
+                {formData.icon_ids?.length === 0 ? (
+                  <span>Select Icons</span>
+                ) : (
+                  formData.icon_ids?.map((iconid) => {
+                    const icon = icons.find((o) => o.id.toString() === iconid);
+                    return (
+                      icons && (
+                        <Badge
+                          key={iconid}
+                          variant="secondary"
+                          className="mr-1 mb-1"
+                        >
+                          <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
+  {icon?.photo ? (
+    <img
+      src={`http://13.51.242.38:4000/${icon.photo}`}
+      alt={icon?.avatar_name}
+      className="w-full h-full object-cover"
+      crossOrigin="anonymous"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  ) : (
+    <span className="text-[10px] text-gray-500 font-medium leading-none">
+      {icon?.avatar_name?.charAt(0)?.toUpperCase()}
+    </span>
+  )}
+</div>{icon?.avatar_name}
+                          <button
+                            className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeIcon(iconid);
+                            }}
+                          >
+                            <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        </Badge>
+                      )
+                    );
+                  })
+                )}
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-2" align="start">
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search icons..."
+                  className="pl-10 h-9"
+                  value={rolePlaySearchQuery}
+                  onChange={(e) => setRolePlaySearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="max-h-[200px] overflow-y-auto space-y-1">
+                {filteredIcons?.map((icon) => (
+                  <div
+                    key={icon.id}
+                    className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-md cursor-pointer"
+                    onClick={() => toggleIcon(icon.id)}
+                  >
+                    <Checkbox
+                      checked={formData.icon_ids?.includes(icon.id)}
+                      onCheckedChange={() => toggleIcon(icon.id)}
+                    />
+
+                    {/* ✅ Image + Name in single row */}
+                    <div className="flex items-center gap-2 text-sm">
+                     <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
+  {icon?.photo ? (
+    <img
+      src={`http://13.51.242.38:4000/${icon.photo}`}
+      alt={icon?.avatar_name}
+      className="w-full h-full object-cover"
+      crossOrigin="anonymous"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  ) : (
+    <span className="text-[10px] text-gray-500 font-medium leading-none">
+      {icon?.avatar_name?.charAt(0)?.toUpperCase()}
+    </span>
+  )}
+</div>
+                      <span className="whitespace-nowrap">
+                        {icon.avatar_name}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {filteredIcons?.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">No icons found</p>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+};
 
 const Certifications = () => {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -29,53 +485,90 @@ const Certifications = () => {
   const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [certToDelete, setCertToDelete] = useState<Certification | null>(null);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [allRoleplays, setAllRolePlays] = useState<any[]>([]);
+  const [icons, setIcons] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        await fetchCertificate()
+          .then((certs) => setCertifications(Array.isArray(certs) ? certs : []))
+          .catch(() => setCertifications([]));
+        await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
+          .catch(() => setOrganizations([]));
+        await fetchDocuments()
+          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
+          .catch(() => setDocuments([]));
+        await fetchRolePlays()
+          .then((rolePlays) => setAllRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
+          .catch(() => setAllRolePlays([]));
+        await fetchUsers()
+          .then((users) => setUsers(Array.isArray(users) ? users : []))
+          .catch(() => setUsers([]));
+        await fetchAvatarConfigurations()
+          .then((icons) => setIcons(Array.isArray(icons) ? icons : []))
+          .catch(() => setIcons([]));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   // Mock data
-  const organizations = [
-    { id: 1, name: "TechCorp" },
-    { id: 2, name: "ServiceHub" },
-    { id: 3, name: "DealMakers" },
-  ];
+  // const organizations = [
+  //   { id: 1, name: "TechCorp" },
+  //   { id: 2, name: "ServiceHub" },
+  //   { id: 3, name: "DealMakers" },
+  // ];
 
-  const allRoleplays = [
-    { id: 1, name: "Sales Consultation - Q1 2024", organization: "TechCorp" },
-    { id: 2, name: "Customer Support Training", organization: "ServiceHub" },
-    { id: 3, name: "Technical Troubleshooting", organization: "TechCorp" },
-    { id: 4, name: "Negotiation Practice", organization: "DealMakers" },
-    { id: 5, name: "Product Demo Training", organization: "TechCorp" },
-  ];
+  // const icons = [
+  //   { id: 1, name: "TechCorp" },
+  //   { id: 2, name: "ServiceHub" },
+  //   { id: 3, name: "DealMakers" },
+  // ];
+
+  // const allRoleplays = [
+  //   { id: 1, name: "Sales Consultation - Q1 2024", organization: "TechCorp" },
+  //   { id: 2, name: "Customer Support Training", organization: "ServiceHub" },
+  //   { id: 3, name: "Technical Troubleshooting", organization: "TechCorp" },
+  //   { id: 4, name: "Negotiation Practice", organization: "DealMakers" },
+  //   { id: 5, name: "Product Demo Training", organization: "TechCorp" },
+  // ];
 
   const [certifications, setCertifications] = useState<Certification[]>([
-    {
-      id: 1,
-      name: "Sales Mastery Certificate",
-      organization: "TechCorp",
-      roleplays: ["Sales Consultation - Q1 2024", "Product Demo Training"],
-      minimumScore: 7,
-      badgeUrl: null,
-    },
-    {
-      id: 2,
-      name: "Customer Service Excellence",
-      organization: "ServiceHub",
-      roleplays: ["Customer Support Training"],
-      minimumScore: 8,
-      badgeUrl: null,
-    },
+
   ]);
 
   const [formData, setFormData] = useState({
     name: "",
-    organizationId: "",
-    roleplayIds: [] as string[],
+    instructions: "",
+    organization_ids: [] as string[], // changed to array
+    role_play_ids: [] as string[],
+    icon_ids: [] as string[], // changed to array
     minimumScore: [5],
     badgeFile: null as File | null,
     badgePreview: null as string | null,
   });
 
+  const handleMultiSelectToggle = (field: "organization_ids" | "role_play_ids" | "icon_ids", id: string) => {
+    const values = formData[field];
+    if (values.includes(id)) {
+      setFormData({ ...formData, [field]: values.filter(v => v !== id) });
+    } else {
+      setFormData({ ...formData, [field]: [...values, id] });
+    }
+  };
+
   const getSelectedOrgName = () => {
-    if (!formData.organizationId) return "";
-    const org = organizations.find(o => o.id === parseInt(formData.organizationId));
+    if (!formData.organization_ids.length) return "";
+    const org = organizations.find(o => o.id === parseInt(formData.organization_ids[0]));
     return org?.name || "";
   };
 
@@ -86,10 +579,10 @@ const Certifications = () => {
   };
 
   const handleRoleplayToggle = (roleplayId: string) => {
-    if (formData.roleplayIds.includes(roleplayId)) {
-      setFormData({ ...formData, roleplayIds: formData.roleplayIds.filter(id => id !== roleplayId) });
+    if (formData.role_play_ids.includes(roleplayId)) {
+      setFormData({ ...formData, role_play_ids: formData.role_play_ids.filter(id => id !== roleplayId) });
     } else {
-      setFormData({ ...formData, roleplayIds: [...formData.roleplayIds, roleplayId] });
+      setFormData({ ...formData, role_play_ids: [...formData.role_play_ids, roleplayId] });
     }
   };
 
@@ -104,80 +597,99 @@ const Certifications = () => {
   const resetForm = () => {
     setFormData({
       name: "",
-      organizationId: "",
-      roleplayIds: [],
+      instructions: "",
+      organization_ids: [],
+      role_play_ids: [],
+      icon_ids: [], // <-- add this
       minimumScore: [5],
       badgeFile: null,
       badgePreview: null,
     });
   };
 
-  const handleCreate = () => {
-    if (!formData.name || !formData.organizationId) {
-      toast.error("Please fill in all required fields");
+  const handleCreate = async () => {
+    if (!formData.name || !formData.organization_ids.length) {
+      toast.error("Please fill in required fields");
       return;
     }
 
-    const orgName = getSelectedOrgName();
-    const roleplayNames = formData.roleplayIds.map(id =>
-      allRoleplays.find(r => r.id === parseInt(id))?.name || ""
-    ).filter(Boolean);
-
-    const newCert: Certification = {
-      id: Date.now(),
+    const payload = {
       name: formData.name,
-      organization: orgName,
-      roleplays: roleplayNames,
-      minimumScore: formData.minimumScore[0],
-      badgeUrl: formData.badgePreview,
+      instructions: formData.instructions,
+      organization_ids: formData.organization_ids,
+      role_play_ids: formData.role_play_ids,
+      icon_ids: formData.icon_ids,
+      min_score: formData.minimumScore[0],
     };
 
-    setCertifications([...certifications, newCert]);
-    setIsCreateSheetOpen(false);
-    resetForm();
-    toast.success("Certification created successfully");
+    try {
+      const res = await createCertificate(payload); // <-- your API
+      toast.success("Certification created");
+
+      setCertifications(prev => [...prev, res.data]);
+
+      setIsCreateSheetOpen(false);
+      resetForm();
+    } catch (err) {
+      toast.error("Failed to create certification");
+    }
   };
 
-  const handleEditClick = (cert: Certification) => {
+  const handleEditClick = (cert: any) => {
     setSelectedCertification(cert);
-    const orgId = organizations.find(o => o.name === cert.organization)?.id?.toString() || "";
-    const roleplayIds = cert.roleplays.map(name =>
-      allRoleplays.find(r => r.name === name)?.id?.toString() || ""
-    ).filter(Boolean);
 
     setFormData({
-      name: cert.name,
-      organizationId: orgId,
-      roleplayIds,
-      minimumScore: [cert.minimumScore],
+      name: cert.name || "",
+      instructions: cert.instructions || "",
+
+      organization_ids:
+        cert.organizations?.map(
+          (org: any) => org.organization?.id
+        ) || [],
+
+      role_play_ids:
+        cert.rolePlays?.map(
+          (rp: any) => rp.rolePlay?.id
+        ) || [],
+
+      icon_ids:
+        cert.icons?.map(
+          (ic: any) => ic.icon?.id
+        ) || [],
+
+      minimumScore: [cert.min_score ?? 0],
+
       badgeFile: null,
-      badgePreview: cert.badgeUrl,
+      badgePreview: null,
     });
+
     setIsEditSheetOpen(true);
   };
-
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!selectedCertification) return;
 
-    const orgName = getSelectedOrgName();
-    const roleplayNames = formData.roleplayIds.map(id =>
-      allRoleplays.find(r => r.id === parseInt(id))?.name || ""
-    ).filter(Boolean);
-
-    const updated: Certification = {
-      ...selectedCertification,
+    const payload = {
       name: formData.name,
-      organization: orgName,
-      roleplays: roleplayNames,
-      minimumScore: formData.minimumScore[0],
-      badgeUrl: formData.badgePreview || selectedCertification.badgeUrl,
+      instructions: formData.instructions,
+      organization_ids: formData.organization_ids,
+      role_play_ids: formData.role_play_ids,
+      icon_ids: formData.icon_ids,
+      min_score: formData.minimumScore[0],
     };
 
-    setCertifications(certifications.map(c => c.id === selectedCertification.id ? updated : c));
-    setIsEditSheetOpen(false);
-    setSelectedCertification(null);
-    resetForm();
-    toast.success("Certification updated successfully");
+    try {
+      const res = await updateCertificateApi(selectedCertification.id, payload);
+
+      setCertifications(prev =>
+        prev.map(c => c.id === selectedCertification.id ? res.data : c)
+      );
+
+      toast.success("Certification updated");
+      setIsEditSheetOpen(false);
+      resetForm();
+    } catch {
+      toast.error("Update failed");
+    }
   };
 
   const handleDeleteClick = (cert: Certification) => {
@@ -185,139 +697,25 @@ const Certifications = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (certToDelete) {
-      setCertifications(certifications.filter(c => c.id !== certToDelete.id));
-      toast.success("Certification deleted successfully");
+  const handleDeleteConfirm = async () => {
+    if (!certToDelete) return;
+
+    try {
+      await deleteCertificate(certToDelete.id);
+
+      setCertifications(prev =>
+        prev.filter(c => c.id !== certToDelete.id)
+      );
+
+      toast.success("Deleted successfully");
+    } catch {
+      toast.error("Delete failed");
     }
+
     setIsDeleteDialogOpen(false);
     setCertToDelete(null);
   };
 
-  const CertificationForm = ({ isEdit = false }: { isEdit?: boolean }) => {
-    const filteredRoleplays = getFilteredRoleplays();
-
-    return (
-      <div className="space-y-6 py-6">
-        {/* Organization */}
-        <div className="space-y-2">
-          <Label>Organization <span className="text-destructive">*</span></Label>
-          <Select
-            value={formData.organizationId}
-            onValueChange={(value) => setFormData({ ...formData, organizationId: value, roleplayIds: [] })}
-          >
-            <SelectTrigger className="h-11 bg-background border-border/50">
-              <SelectValue placeholder="Select organization" />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              {organizations.map((org) => (
-                <SelectItem key={org.id} value={org.id.toString()}>
-                  {org.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Certificate Name */}
-        <div className="space-y-2">
-          <Label htmlFor="certName">Certificate Name <span className="text-destructive">*</span></Label>
-          <Input
-            id="certName"
-            placeholder="Enter certificate name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="h-11 bg-background border-border/50"
-          />
-        </div>
-
-        {/* Roleplays Multi-select */}
-        <div className="space-y-2">
-          <Label>Roleplays</Label>
-          {!formData.organizationId ? (
-            <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-              Please select an organization first
-            </p>
-          ) : filteredRoleplays.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-              No roleplays available for this organization
-            </p>
-          ) : (
-            <div className="border border-border/50 rounded-lg max-h-48 overflow-y-auto">
-              {filteredRoleplays.map((rp) => (
-                <div
-                  key={rp.id}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 border-b border-border/30 last:border-b-0 cursor-pointer"
-                  onClick={() => handleRoleplayToggle(rp.id.toString())}
-                >
-                  <Checkbox
-                    checked={formData.roleplayIds.includes(rp.id.toString())}
-                    onCheckedChange={() => handleRoleplayToggle(rp.id.toString())}
-                  />
-                  <span className="text-sm">{rp.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Minimum Score Slider */}
-        <div className="space-y-4">
-          <Label>Minimum Score Needed</Label>
-          <div className="px-2">
-            <Slider
-              value={formData.minimumScore}
-              onValueChange={(value) => setFormData({ ...formData, minimumScore: value })}
-              max={10}
-              min={0}
-              step={1}
-              className="w-full"
-            />
-            <div className="flex justify-between mt-2">
-              <span className="text-xs text-muted-foreground">0</span>
-              <span className="text-sm font-medium text-primary">{formData.minimumScore[0]}</span>
-              <span className="text-xs text-muted-foreground">10</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Upload Badge */}
-        <div className="space-y-2">
-          <Label>Upload Badge</Label>
-          <div className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center">
-            {formData.badgePreview ? (
-              <div className="flex flex-col items-center gap-3">
-                <img
-                  src={formData.badgePreview}
-                  alt="Badge preview"
-                  className="w-16 h-16 object-contain rounded-lg"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFormData({ ...formData, badgeFile: null, badgePreview: null })}
-                >
-                  Remove
-                </Button>
-              </div>
-            ) : (
-              <label className="cursor-pointer flex flex-col items-center gap-2">
-                <Upload className="h-8 w-8 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Click to upload badge icon</span>
-                <span className="text-xs text-muted-foreground">PNG, JPG, SVG (max 2MB)</span>
-                <input
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.svg"
-                  className="hidden"
-                  onChange={handleBadgeUpload}
-                />
-              </label>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <DashboardLayout>
@@ -364,16 +762,22 @@ const Certifications = () => {
                 {certifications.map((cert) => (
                   <TableRow key={cert.id} className="border-border/50 hover:bg-muted/30">
                     <TableCell className="font-medium">{cert.name}</TableCell>
-                    <TableCell>{cert.organization}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {cert.roleplays.map((rp, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{rp}</Badge>
+                        {cert.organizations.map((org, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{org?.organization?.name}</Badge>
                         ))}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{cert.minimumScore}/10</Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {cert.rolePlays.map((rp, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{rp?.rolePlay?.name}</Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{cert.min_score}/10</Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
@@ -403,7 +807,11 @@ const Certifications = () => {
                   <SheetTitle className="text-2xl">Add Certification</SheetTitle>
                   <SheetDescription>Create a new certification with requirements</SheetDescription>
                 </SheetHeader>
-                <CertificationForm />
+                <CertificationForm formData={formData}
+                  setFormData={setFormData}
+                  organizations={organizations}
+                  allRoleplays={allRoleplays}
+                  icons={icons} />
               </div>
             </div>
             <SheetFooter className="border-t bg-background p-6 mt-auto">
@@ -424,7 +832,7 @@ const Certifications = () => {
                   <SheetTitle className="text-2xl">Edit Certification</SheetTitle>
                   <SheetDescription>Update certification details</SheetDescription>
                 </SheetHeader>
-                <CertificationForm isEdit />
+                <CertificationForm isEdit formData={formData} setFormData={setFormData} organizations={organizations} allRoleplays={allRoleplays} icons={icons} />
               </div>
             </div>
             <SheetFooter className="border-t bg-background p-6 mt-auto">

@@ -163,14 +163,23 @@ interface AvatarOption {
                         : "border-border/50 hover:border-primary/50"
                       }`}
                   >
-                    <div className="aspect-square rounded-md overflow-hidden mb-2">
-                      <img
-                        src={`http://13.51.242.38:4000/${avatar.photo}`}
-                        alt={avatar.avatar_name}
-                        className="w-full h-full object-cover"
-                        crossorigin="anonymous"
-                      />
-                    </div>
+                    <div className="aspect-square rounded-md overflow-hidden mb-2 bg-gray-200 flex items-center justify-center">
+  {avatar?.photo ? (
+    <img
+      src={`http://13.51.242.38:4000/${avatar.photo}`}
+      alt={avatar.avatar_name}
+      className="w-full h-full object-cover"
+      crossOrigin="anonymous"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  ) : (
+    <span className="text-gray-500 text-sm font-medium">
+      {avatar?.avatar_name?.charAt(0)?.toUpperCase()}
+    </span>
+  )}
+</div>
                     <p className="text-xs font-medium text-center truncate">{avatar.avatar_name}</p>
                     {isSelected && (
                       <div className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
@@ -581,14 +590,29 @@ const Avatars = () => {
 
               return (
                 <div key={id} className="flex items-center gap-2 bg-muted/40 px-2 py-1 rounded-md">
-                  <img
-                    src={`http://13.51.242.38:4000/${config.photo}`}
-                    alt={config.avatar_name}
-                    className="w-8 h-8 rounded-full object-cover"
-                    crossOrigin="anonymous"
-                  />
-                  <span className="text-xs font-medium">{config.avatar_name}</span>
-                </div>
+  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
+    {config?.photo ? (
+      <img
+        src={`http://13.51.242.38:4000/${config.photo}`}
+        alt={config.avatar_name}
+        className="w-full h-full object-cover"
+        crossOrigin="anonymous"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    ) : (
+      <span className="text-xs font-semibold text-gray-500 leading-none">
+        {config?.avatar_name?.charAt(0)?.toUpperCase()}
+      </span>
+    )}
+  </div>
+
+  <span className="text-xs font-medium">
+    {config.avatar_name}
+  </span>
+</div>
+                
               );
             })
           ) : (

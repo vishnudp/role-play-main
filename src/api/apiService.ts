@@ -346,5 +346,25 @@ export async function fetchCertificate() {
 }
 
 
+export async function createCertificate(payload: any) {
+  const res = await apiClient.post("/certifications", payload);
+  return res.data.data; // returns the created certificate
+}
+
+
+
+// Edit Certificate
+export async function updateCertificateApi(certificateId: any, payload: any) {
+  const res = await apiClient.put(`/certifications/${certificateId}`, payload);
+  return res.data.data; // returns the updated certificate
+}
+
+// Delete Certificate
+export async function deleteCertificate(certificateId: any) {
+  const res = await apiClient.delete(`/certifications/${certificateId}`);
+  return res.data.data; // can return some confirmation or the deleted object
+}
+
+
 
 
