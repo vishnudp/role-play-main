@@ -314,5 +314,37 @@ export async function deleteRoleApi(RoleId: any) {
   return res.data.data; // can return some confirmation or the deleted object
 }
 
+export async function fetchAssignment() {
+  const res = await apiClient.get('/assignments');
+  return res.data.data;
+}
+
+// Create Assignment
+export async function createAssignment(payload: any) {
+  const res = await apiClient.post("/assignments", payload);
+  return res.data.data; // returns the created assignment
+}
+
+
+
+// Edit Assignment
+export async function updateAssignmentApi(assignmentId: any, payload: any) {
+  const res = await apiClient.put(`/assignments/${assignmentId}`, payload);
+  return res.data.data; // returns the updated assignment
+}
+
+// Delete Assignment
+export async function deleteAssignment(assignmentId: any) {
+  const res = await apiClient.delete(`/assignments/${assignmentId}`);
+  return res.data.data; // can return some confirmation or the deleted object
+}
+
+
+export async function fetchCertificate() {
+  const res = await apiClient.get('/certifications');
+  return res.data.data;
+}
+
+
 
 
