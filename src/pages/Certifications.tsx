@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { fetchAvatarConfigurations, fetchCertificate, fetchOrganizations, fetchRolePlays } from "../api/apiService";
 import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, createCertificate, updateCertificateApi, deleteCertificate } from "../api/apiService";
 import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { API_BASE_URL } from '../config/apiConfig';
 interface Certification {
   id: string;
   name: string;
@@ -385,7 +386,7 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                           <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
                             {icon?.photo ? (
                               <img
-                                src={`http://13.51.242.38:4000/${icon.photo}`}
+                                src={`${API_BASE_URL}/${icon.photo}`}
                                 alt={icon?.avatar_name}
                                 className="w-full h-full object-cover"
                                 crossOrigin="anonymous"
@@ -447,7 +448,7 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                       <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
                         {icon?.photo ? (
                           <img
-                            src={`http://13.51.242.38:4000/${icon.photo}`}
+                            src={`${API_BASE_URL}/${icon.photo}`}
                             alt={icon?.avatar_name}
                             className="w-full h-full object-cover"
                             crossOrigin="anonymous"

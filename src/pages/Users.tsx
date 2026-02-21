@@ -296,7 +296,7 @@ const UsersPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground font-medium">Active Role Plays</p>
-                  <p className="text-3xl font-bold text-foreground mt-2">{fetchRolePlays.length}</p>
+                  <p className="text-3xl font-bold text-foreground mt-2">{rolePlays.length}</p>
                 </div>
                 <div className="p-3 bg-success/10 rounded-lg">
                   <Shield className="h-6 w-6 text-success" />

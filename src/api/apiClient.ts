@@ -14,7 +14,7 @@ export const apiClient = {
 
 // Example: login function
 export async function login(email: string, password: string) {
-  const response = await api.post('/auth/login', { email, password });
+  const response = await api.post('api/auth/login', { email, password });
   const { access_token, refresh_token, user } = response.data.data || {};
   if (access_token && refresh_token) {
     localStorage.setItem('accessToken', access_token);
@@ -33,7 +33,7 @@ export async function logout() {
 
     // Call the backend logout API
     if (refreshToken) {
-      await api.post('/auth/logout', { refresh_token: refreshToken });
+      await api.post('api/auth/logout', { refresh_token: refreshToken });
     }
 
     // Clear local storage tokens

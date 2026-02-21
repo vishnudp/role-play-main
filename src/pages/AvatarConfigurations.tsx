@@ -41,6 +41,7 @@ import { fetchOrganizations } from "../api/apiService";
 import { fetchAvatarConfigurations, uploadAvatarConfiguration, deleteAvatarConfiguration, fetchUsers } from "../api/apiService";
 import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
 import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File, Eye } from "lucide-react";
+import { API_BASE_URL } from "@/config/apiConfig";
 
 
 const AvatarConfigurations = () => {
@@ -238,7 +239,7 @@ const AvatarConfigurations = () => {
                               <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
                                 {doc?.photo ? (
                                   <img
-                                    src={`http://13.51.242.38:4000/${doc.photo}`}
+                                    src={`${API_BASE_URL}${doc.photo}`}
                                     alt={doc.avatar_name}
                                     className="w-full h-full object-cover"
                                     crossOrigin="anonymous"

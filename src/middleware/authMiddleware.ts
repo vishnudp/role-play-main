@@ -2,8 +2,7 @@
 // Middleware to handle authentication for API requests in React (client-side)
 
 import axios from 'axios';
-
-const API_BASE_URL = 'http://13.51.242.38:4000/api';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // Get tokens from localStorage
 function getAuthTokens() {

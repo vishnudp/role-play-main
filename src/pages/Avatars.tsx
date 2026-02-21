@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "sonner";
 import { fetchAvatars, fetchMetaData, fetchOrganizations, fetchAvatarConfigurations, addAvatar, editAvatar, deleteAvatar } from "../api/apiService";
 import { getOrganizationName } from "@/lib/lookupUtils";
+import { API_BASE_URL } from '../config/apiConfig';
 
 interface AvatarFormContentProps {
   isEdit?: boolean;
@@ -147,7 +148,7 @@ const AvatarFormContent = ({
       </div>
       <div className="p-4 space-y-4 bg-card/50">
         <div className="space-y-2">
-          <Label>Select Avatars <span className="text-muted-foreground text-xs">(Multi-select)</span></Label>
+          <Label>Select Avatars <span className="text-muted-foreground text-xs"></span></Label>
           <p className="text-xs text-muted-foreground mb-3">
             {(formData.selectedAvatarIds || []).length} avatar(s) selected
           </p>
@@ -166,7 +167,7 @@ const AvatarFormContent = ({
                   <div className="aspect-square rounded-md overflow-hidden mb-2 bg-gray-200 flex items-center justify-center">
                     {avatar?.photo ? (
                       <img
-                        src={`http://13.51.242.38:4000/${avatar.photo}`}
+                        src={`${API_BASE_URL}/${avatar.photo}`}
                         alt={avatar.avatar_name}
                         className="w-full h-full object-cover"
                         crossOrigin="anonymous"
@@ -394,19 +395,22 @@ const Avatars = () => {
   // if (loading) return <p>Loading avatars...</p>;
 
   const toggleAvatarSelection = (avatarId: string) => {
-    const currentSelection = formData.selectedAvatarIds || [];
-    if (currentSelection.includes(avatarId)) {
-      setFormData({
-        ...formData,
-        selectedAvatarIds: currentSelection.filter(id => id !== avatarId)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        selectedAvatarIds: [...currentSelection, avatarId]
-      });
-    }
-  };
+  const currentSelection = formData.selectedAvatarIds || [];
+
+  // If already selected → deselect (empty array)
+  if (currentSelection.includes(avatarId)) {
+    setFormData({
+      ...formData,
+      selectedAvatarIds: []
+    });
+  } else {
+    // Single select → replace array with one value
+    setFormData({
+      ...formData,
+      selectedAvatarIds: [avatarId]
+    });
+  }
+};
 
   const filteredAvatars = avatars.filter(avatar => {
     const matchesSearch =
@@ -593,7 +597,7 @@ const Avatars = () => {
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
                     {config?.photo ? (
                       <img
-                        src={`http://13.51.242.38:4000/${config.photo}`}
+                        src={`${API_BASE_URL}/${config.photo}`}
                         alt={config.avatar_name}
                         className="w-full h-full object-cover"
                         crossOrigin="anonymous"

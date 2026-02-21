@@ -6,7 +6,7 @@
  * @param id Organization id to look up
  * @returns Organization name or 'Unknown'
  */
-const API_BASE_URL = 'http://13.51.242.38:4000';
+import { API_BASE_URL } from '../config/apiConfig';
 import { toast } from "sonner";
 
 export function getOrganizationName(organizations: any[], id: string): string {
