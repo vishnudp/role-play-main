@@ -1,11 +1,11 @@
 // Automatically detect protocol (http or https)
-const protocol = window.location.protocol;
+const protocol = 'https:' === window.location.protocol ? 'https:' : 'http:';
 
 // If backend is on same server (recommended)
-const host = '13.51.242.38';
+const host = 'www.crypticsapi.live';
 
 // Change port if needed
 const port = '4000';
 
 // Build base URL
-export const API_BASE_URL = `${protocol}//${host}:${port}`;
+export const API_BASE_URL = `${protocol}//${host}`;
