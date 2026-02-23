@@ -38,7 +38,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fetchOrganizations } from "../api/apiService";
-import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers } from "../api/apiService";
+import { fetchDocuments, uploadDocument, uploadDocumentExternal, deleteDocument, fetchUsers } from "../api/apiService";
 import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
 import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File, Eye } from "lucide-react";
 
@@ -107,6 +107,11 @@ const Documents = () => {
     console.log('Uploading file:', selectedFile, isFile, selectedFile && selectedFile.name);
     try {
       await uploadDocument({
+        name: documentName,
+        organization_id: isSuperAdmin ? selectedOrg : undefined,
+        file: selectedFile,
+      });
+      await uploadDocumentExternal({
         name: documentName,
         organization_id: isSuperAdmin ? selectedOrg : undefined,
         file: selectedFile,
@@ -375,7 +380,7 @@ const Documents = () => {
                       Click to upload or drag and drop
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      PDF, DOCX, PPTX, TXT, CSV (max 50MB)
+                      PDF (max 50MB)
                     </p>
                   </>
                 )}
@@ -384,7 +389,7 @@ const Documents = () => {
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                accept=".pdf,.doc,.docx,.pptx,.txt,.csv"
+                accept=".pdf"
                 onChange={handleFileChange}
               />
             </div>

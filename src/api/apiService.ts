@@ -72,6 +72,48 @@ export async function uploadDocument({
   return res.data.data;
 }
 
+// Upload document
+export async function uploadDocumentExternal({
+  name,
+  organization_id,
+  file,
+}: {
+  name: string;
+  organization_id?: string;
+  file: File;
+}) {
+  if (!(file instanceof File) || !file.name) {
+    console.error('uploadDocument: file is not a valid File object', file);
+    throw new Error('No valid file selected for upload.');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file); // must match curl: -F 'file=@sample.pdf'
+  formData.append('name', name);
+
+  const res = await fetch('https://api.insitehub.com/document_upload', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      ...(organization_id && {
+        'Organization-Id': organization_id,
+        'Verification-Token': 'y9sr8rr',
+      }),
+      'File-Name': file.name,
+      // ❌ DO NOT set Content-Type manually when using FormData
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Upload failed: ${errorText}`);
+  }
+
+  const data = await res.json();
+  return data;
+}
+
 //Delete document
 
 export async function deleteDocument(documentId: string) {

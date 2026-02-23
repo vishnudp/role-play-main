@@ -403,7 +403,7 @@ const UsersPage = () => {
                         <td className="p-4">
                           <div className="flex items-center gap-1.5 text-sm">
                             <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-medium text-foreground">{user?.organization}</span>
+                            <span className="font-medium text-foreground">{getOrganizationName(organizations,user?.parent_id)}</span>
                           </div>
                         </td>
                         <td className="p-4">

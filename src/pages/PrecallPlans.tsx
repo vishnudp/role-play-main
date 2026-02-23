@@ -132,6 +132,15 @@ const PrecallPlans = () => {
       });
       toast.success("Plan created successfully!");
       setIsAddSheetOpen(false);
+      fetchPreCallPlans()
+          .then((res) => {
+            if (Array.isArray(res)) {
+              setPlans(res);
+            } else {
+              setPlans([]);
+            }
+          })
+          .catch(() => setPlans([]));
       // await loadPlans(); // refetch from API
     } catch (err) {
       toast.error("Failed to create plan.");
@@ -150,7 +159,15 @@ const PrecallPlans = () => {
       const org = organizations.find((o) => o.id === plan.organization_id);
       setEditOrgId(org ? org.id.toString() : "");
     }
-
+    fetchPreCallPlans()
+          .then((res) => {
+            if (Array.isArray(res)) {
+              setPlans(res);
+            } else {
+              setPlans([]);
+            }
+          })
+          .catch(() => setPlans([]));
     setIsEditSheetOpen(true);
   };
 

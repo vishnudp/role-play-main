@@ -7,9 +7,9 @@ interface LogoProps {
 
 export const Logo = ({ className = "", size = "md" }: LogoProps) => {
   const sizeClasses = {
-    sm: "h-6 w-6",
-    md: "h-8 w-8",
-    lg: "h-10 w-10"
+    sm: "w-[75%] h-auto",
+    md: "w-[65%] h-auto",
+    lg: "w-[50%] h-auto"
   };
 
   const textSizes = {
@@ -20,12 +20,13 @@ export const Logo = ({ className = "", size = "md" }: LogoProps) => {
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div className="bg-gradient-primary rounded-lg p-2">
+      {/* <div className="bg-gradient-primary rounded-lg p-2">
         <Brain className={`${sizeClasses[size]} text-primary-foreground`} />
       </div>
       <span className={`font-bold ${textSizes[size]} bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent`}>
         RolePlayAI
-      </span>
+      </span> */}
+      <img src="/logo.png" alt="RolePlayAI Logo" className={`${sizeClasses[size]} rounded-md`} />
     </div>
   );
 };

@@ -26,6 +26,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
+
 interface Document {
   id: string;
   name: string;
@@ -34,6 +37,7 @@ interface Document {
 }
 
 const Organizations = () => {
+  const { hasPermission } = usePermission();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<any>(null);
@@ -175,7 +179,7 @@ const Organizations = () => {
       toast.success("Organization created successfully!");
     } catch (error) {
       console.error("Create org failed:", error);
-      toast.error("Failed to create organization.");
+      toast.error(error?.details?.[0]?.message || "Failed to create organization.");
     }
   };
 
@@ -214,7 +218,7 @@ const Organizations = () => {
       toast.success("Organization deleted successfully!");
     } catch (error) {
       console.error("Delete failed:", error);
-      toast.error("Failed to delete organization.");
+      toast.error(error?.details?.[0]?.message || "Failed to delete organization.");
     } finally {
       setIsDeleting(false);
     }
@@ -259,7 +263,7 @@ const Organizations = () => {
       toast.success("Organization updated successfully!");
     } catch (error) {
       console.error("Update failed:", error);
-      toast.error("Failed to update organization.");
+      toast.error(error?.details?.[0]?.message || "Failed to update organization." || error?.message || "An error occurred while updating the organization.");
     }
   };
 
@@ -375,9 +379,9 @@ const Organizations = () => {
                     .filter((org) => {
                       const query = searchQuery.toLowerCase();
                       return (
-                        org.name.toLowerCase().includes(query) ||
-                        org.email?.toLowerCase().includes(query) ||
-                        org.phone?.toLowerCase().includes(query)
+                        org?.name?.toLowerCase().includes(query) ||
+                        org?.email?.toLowerCase().includes(query) ||
+                        org?.phone?.toLowerCase().includes(query)
                       );
                     })
                     .map((org) => (
@@ -467,17 +471,20 @@ const Organizations = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="entity-name">Entity Name *</Label>
-                        <Input id="entity-name" placeholder="Enter entity name" required />
+                        <Input id="entity-name" placeholder="Enter entity name" required value={formData.name}
+  onChange={(e) => handleInputChange("name", e.target.value)}/>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="entity-address">Entity Address</Label>
-                        <Input id="entity-address" placeholder="Enter address" />
+                        <Input id="entity-address" placeholder="Enter address" value={formData.address}
+  onChange={(e) => handleInputChange("address", e.target.value)}/>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" placeholder="Enter organization description" rows={3} />
+                      <Textarea id="description" placeholder="Enter organization description" rows={3} value={formData.description}
+  onChange={(e) => handleInputChange("description", e.target.value)}/>
                     </div>
                   </div>
 
@@ -487,11 +494,13 @@ const Organizations = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="login-email">Login Email *</Label>
-                        <Input id="login-email" type="email" placeholder="login@example.com" required />
+                        <Input id="login-email" type="email" placeholder="login@example.com" required value={formData.email}
+  onChange={(e) => handleInputChange("email", e.target.value)}/>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="login-password">Password *</Label>
-                        <Input id="login-password" type="password" placeholder="Enter password" required />
+                        <Input id="login-password" type="password" placeholder="Enter password" required value={formData.password}
+  onChange={(e) => handleInputChange("password", e.target.value)}/>
                       </div>
                     </div>
                   </div>
@@ -504,11 +513,13 @@ const Organizations = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="contact-name">Contact Name</Label>
-                        <Input id="contact-name" type="text" placeholder="Enter contact name" />
+                        <Input id="contact-name" type="text" placeholder="Enter contact name" value={formData.contact_person_name}
+  onChange={(e) => handleInputChange("contact_person_name", e.target.value)}/>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="contact-email">Contact Email</Label>
-                        <Input id="contact-email" type="email" placeholder="contact@example.com" />
+                        <Input id="contact-email" type="email" placeholder="contact@example.com" value={formData.contact_person_email}
+  onChange={(e) => handleInputChange("contact_person_email", e.target.value)}/>
                       </div>
 
                     </div>
@@ -516,7 +527,8 @@ const Organizations = () => {
 
                       <div className="space-y-2">
                         <Label htmlFor="contact-phone">Contact Phone</Label>
-                        <Input id="contact-phone" type="tel" placeholder="+1 234 567 8900" />
+                        <Input id="contact-phone" type="tel" placeholder="+1 234 567 8900"  value={formData.contact_person_phone}
+  onChange={(e) => handleInputChange("contact_person_phone", e.target.value)}/>
                       </div>
                     </div>
                   </div>
@@ -527,7 +539,8 @@ const Organizations = () => {
                       <Label htmlFor="active-status">Active</Label>
                       <p className="text-sm text-muted-foreground">Enable this organization</p>
                     </div>
-                    <Switch id="active-status" defaultChecked />
+                    <Switch id="active-status" checked={formData.is_active}
+  onCheckedChange={(val) => handleInputChange("is_active", val)} />
                   </div>
                 </div>
               </div>
@@ -672,10 +685,10 @@ const Organizations = () => {
                     <Input value={formData.email} disabled />
                   </div>
 
-                  <div>
+                  {/* <div>
                     <Label>Phone</Label>
                     <Input value={formData.phone} disabled />
-                  </div>
+                  </div> */}
 
                   <div>
                     <Label>Address</Label>

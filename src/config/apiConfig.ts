@@ -1,5 +1,5 @@
 // Automatically detect protocol (http or https)
-const protocol = 'https:' === window.location.protocol ? 'https:' : 'http:';
+const protocol = 'https:' === window.location.protocol ? 'https:' : 'https:';
 
 // If backend is on same server (recommended)
 const host = 'www.crypticsapi.live';

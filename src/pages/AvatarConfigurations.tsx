@@ -44,6 +44,7 @@ import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File,
 import { API_BASE_URL } from "@/config/apiConfig";
 
 
+
 const AvatarConfigurations = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<any>(null);
@@ -360,7 +361,7 @@ const AvatarConfigurations = () => {
                       Click to upload or drag and drop
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      PDF, DOCX, PPTX, TXT, CSV (max 50MB)
+                      PNG, JPG, JPEG (max 50MB)
                     </p>
                   </>
                 )}
@@ -369,7 +370,7 @@ const AvatarConfigurations = () => {
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                accept=".pdf,.doc,.docx,.pptx,.txt,.csv"
+                accept=".png,.jpg,.jpeg"
                 onChange={handleFileChange}
               />
             </div>

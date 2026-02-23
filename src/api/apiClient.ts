@@ -2,6 +2,7 @@
 // Centralized API CRUD handler using the authentication middleware
 
 import { api } from '../middleware/authMiddleware';
+import { extractPermissionKeys } from '../utils/permissionUtils';
 
 // Generic CRUD operations
 export const apiClient = {
@@ -21,6 +22,8 @@ export async function login(email: string, password: string) {
     localStorage.setItem('refreshToken', refresh_token);
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
+       const permissions = extractPermissionKeys(user);
+      localStorage.setItem('permissions', JSON.stringify(permissions));
     }
   }
   return response.data;
