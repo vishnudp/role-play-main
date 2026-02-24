@@ -46,7 +46,10 @@ interface AssignmentFormProps {
   formData: typeof formData;
   setFormData: React.Dispatch<React.SetStateAction<typeof formData>>;
   assignmentType: "ROLE_PLAY" | "CERTIFICATE";
-  setAssignmentType: React.Dispatch<React.SetStateAction<"ROLE_PLAY" | "CERTIFICATE">>;
+  setAssignmentType: (
+    type: "ROLE_PLAY" | "CERTIFICATE",
+    isEdit: boolean
+  ) => void;
   selectedOrganization: string;
   setSelectedOrganization: React.Dispatch<React.SetStateAction<string>>;
   users: User[];
@@ -56,6 +59,8 @@ interface AssignmentFormProps {
   filteredCertificates: any[];
   organizations: any[];  // <-- ADD THIS
   getFilteredUsers: () => User[];
+  handleSelectAllUsers: (checked: boolean) => void; // <-- ADD THIS
+  handleUserToggle: (userId: string) => void; // <-- ADD THIS
 }
 
 const AssignmentForm = ({
@@ -72,11 +77,14 @@ const AssignmentForm = ({
   filteredRolePlays,
   filteredCertificates,
   organizations,
-  getFilteredUsers
+  getFilteredUsers,
+  handleSelectAllUsers,
+  handleUserToggle
 }: AssignmentFormProps) => {
   // copy all the JSX here
   // replace all references to `formData`, `setFormData`, `assignmentType`, etc. with the props
   const filteredUsers = getFilteredUsers();
+  console.log('filteredUsers--', filteredUsers)
   const allSelected = filteredUsers.length > 0 && formData.assignedUsers.length === filteredUsers.length;
 
 
@@ -101,6 +109,7 @@ const AssignmentForm = ({
         <Select
           value={selectedOrganization}
           onValueChange={(value) => setSelectedOrganization(value)}
+          disabled={isEdit}
         >
           <SelectTrigger className="h-11 bg-background border-border/50">
             <SelectValue placeholder="Select organization" />
@@ -120,16 +129,18 @@ const AssignmentForm = ({
         <Button
           size="sm"
           variant={assignmentType === "ROLE_PLAY" ? "default" : "outline"}
-          onClick={() => setAssignmentType("ROLE_PLAY")}
+          onClick={() => setAssignmentType("ROLE_PLAY", isEdit)}
           className="flex-1"
+          disabled={isEdit} // Disable if editing and certificate is selected
         >
           Roleplay
         </Button>
         <Button
           size="sm"
           variant={assignmentType === "CERTIFICATE" ? "default" : "outline"}
-          onClick={() => setAssignmentType("CERTIFICATE")}
+          onClick={() => setAssignmentType("CERTIFICATE", isEdit)}
           className="flex-1"
+          disabled={isEdit}
         >
           Certificate
         </Button>
@@ -142,11 +153,11 @@ const AssignmentForm = ({
             value={Array.isArray(formData.rolePlayIds) ? formData.rolePlayIds : [formData.rolePlayIds]}
             onValueChange={(value: string | string[]) => {
               // Radix Select passes string if single select, array if multi-select (rare)
-              setFormData({
-                ...formData,
+              setFormData(prev => ({
+                ...prev,
                 rolePlayIds: Array.isArray(value) ? value : [value],
-                assignedUsers: []
-              });
+                assignedUsers: isEdit ? prev.assignedUsers : []
+              }));
             }}
             multiple
           >
@@ -162,12 +173,16 @@ const AssignmentForm = ({
                   key={rp.id}
                   value={rp.id.toString()}
                   onClick={() => {
+                    const orgId = rp.organization_id?.toString();
+
+                    setSelectedOrganization(orgId);   // 👈 ADD THIS
+
                     setFormData(prev => ({
                       ...prev,
                       rolePlayIds: prev.rolePlayIds.includes(rp.id.toString())
                         ? prev.rolePlayIds.filter(id => id !== rp.id.toString())
                         : [...prev.rolePlayIds, rp.id.toString()],
-                      assignedUsers: [],
+                      assignedUsers: isEdit ? prev.assignedUsers : []
                     }));
                   }}
                 >
@@ -182,14 +197,26 @@ const AssignmentForm = ({
           <Label>Certificate <span className="text-destructive">*</span></Label>
           <Select
             value={formData.certificateId || ""}
-            onValueChange={(value) => setFormData({ ...formData, certificateId: value, assignedUsers: [] })}
+            onValueChange={(value: string) => {
+              const cert = filteredCertificates.find(c => c.id === value);
+
+              // Pick the first organization for the selected certificate
+              const orgId = cert?.organizations?.[0]?.organization?.id || "";
+              setSelectedOrganization(orgId);
+
+              setFormData(prev => ({
+                ...prev,
+                certificateId: value,
+                assignedUsers: isEdit ? prev.assignedUsers : []
+              }));
+            }}
           >
             <SelectTrigger className="h-11 bg-background border-border/50">
               <SelectValue placeholder="Select certificate" />
             </SelectTrigger>
             <SelectContent className="bg-background z-50">
               {filteredCertificates.map(cert => (
-                <SelectItem key={cert.id} value={cert.id.toString()}>
+                <SelectItem key={cert.id} value={cert.id}>
                   {cert.name}
                 </SelectItem>
               ))}
@@ -212,22 +239,29 @@ const AssignmentForm = ({
 
       {/* Due Time */}
       <div className="space-y-2">
-        <Label htmlFor="dueTime">Due Time <span className="text-destructive">*</span></Label>
-        <Input
+        <Label htmlFor="dueTime">
+          Due Time <span className="text-destructive">*</span>
+        </Label>
+
+        <input
           id="dueTime"
           type="time"
           value={formData.dueTime}
-          onChange={(e) => setFormData({ ...formData, dueTime: e.target.value })}
-          className="h-11 bg-background border-border/50"
+          onChange={(e) =>
+            setFormData({ ...formData, dueTime: e.target.value })
+          }
+          className="appearance-auto h-11 w-full rounded-md border border-border bg-background px-3"
         />
       </div>
 
       {/* User Assignment */}
+
       <div className="space-y-2">
-        <Label>Assign Users {formData.sessionId && `(${getSelectedSessionOrg()})`}</Label>
-        {!formData.sessionId ? (
+        <Label>Assign Users </Label>
+
+        {!selectedOrganization ? (
           <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-            Please select a roleplay first to see available users
+            Please select an organization first to see available users
           </p>
         ) : filteredUsers.length === 0 ? (
           <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
@@ -243,27 +277,32 @@ const AssignmentForm = ({
                 onCheckedChange={handleSelectAllUsers}
               />
               <Label htmlFor="selectAll" className="text-sm font-medium cursor-pointer">
-                Select All ({filteredUsers.length} users)
+                Select All ({formData.assignedUsers.length} users)
               </Label>
             </div>
 
             {/* User List */}
             <div className="max-h-48 overflow-y-auto">
-              {filteredUsers.map((user) => (
-                <div key={user.id} className="flex items-center gap-3 p-3 border-b border-border/30 last:border-b-0 hover:bg-muted/20">
-                  <Checkbox
-                    id={`user-${user.id}`}
-                    checked={formData.assignedUsers.includes(user.id)}
-                    onCheckedChange={() => handleUserToggle(user.id)}
-                  />
-                  <Label htmlFor={`user-${user.id}`} className="text-sm cursor-pointer flex-1">
-                    {user.name}
-                  </Label>
-                </div>
-              ))}
+              {(isEdit ? filteredUsers.filter(u => formData.assignedUsers.includes(u.id)) : filteredUsers)
+                .map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-3 p-3 border-b border-border/30 last:border-b-0 hover:bg-muted/20"
+                  >
+                    <Checkbox
+                      id={`user-${user.id}`}
+                      checked={formData.assignedUsers.includes(user.id)}
+                      onCheckedChange={() => handleUserToggle(user.id)}
+                    />
+                    <Label htmlFor={`user-${user.id}`} className="text-sm cursor-pointer flex-1">
+                      {user.name}
+                    </Label>
+                  </div>
+                ))}
             </div>
           </div>
         )}
+
         {formData.assignedUsers.length > 0 && (
           <p className="text-xs text-muted-foreground">
             {formData.assignedUsers.length} user(s) selected
@@ -277,7 +316,7 @@ const AssignmentForm = ({
 
 
 const Assignments = () => {
-   const { can } = usePermission();
+  const { can } = usePermission();
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
@@ -292,8 +331,10 @@ const Assignments = () => {
   const [selectedOrganization, setSelectedOrganization] = useState<string>("");
   const [certificates, setCertificates] = useState<any[]>([]);
   const [assignmentType, setAssignmentType] = useState<"ROLE_PLAY" | "CERTIFICATE">("ROLE_PLAY");
-  const filteredRolePlays = rolePlays.filter(rp => rp.organization === selectedOrganization);
-  const filteredCertificates = certificates.filter(c => c.organization === selectedOrganization);
+  const filteredRolePlays = rolePlays.filter(rp => rp.organization_id === selectedOrganization);
+  const filteredCertificates = certificates.filter(cert =>
+    cert.organizations?.some(orgObj => orgObj.organization.id === selectedOrganization)
+  );
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -304,6 +345,28 @@ const Assignments = () => {
     assignedUsers: [] as string[],
   });
 
+const handleAssignmentTypeChange = (
+  type: "ROLE_PLAY" | "CERTIFICATE",
+  isEdit: boolean
+) => {
+  setAssignmentType(type);
+
+  if (!isEdit) {
+    setFormData(prev => ({
+      ...prev,
+      rolePlayIds: [],
+      certificateId: "",
+      assignedUsers: []
+    }));
+
+  } else {
+    setFormData(prev => ({
+      ...prev,
+      rolePlayIds: [],
+      certificateId: ""
+    }));
+  }
+};
 
 
   // Mock users data
@@ -312,6 +375,15 @@ const Assignments = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([
 
   ]);
+
+  const handleSelectAllUsers = (checked: boolean) => {
+    if (checked) {
+      const filteredUsers = getFilteredUsers();
+      setFormData({ ...formData, assignedUsers: filteredUsers.map(u => u.id) });
+    } else {
+      setFormData({ ...formData, assignedUsers: [] });
+    }
+  };
 
   const buildAssignmentPayload = () => {
     const dueAt = new Date(`${formData.dueDate}T${formData.dueTime}`).toISOString();
@@ -387,18 +459,14 @@ const Assignments = () => {
 
   // Filter users based on selected session's organization
   const getFilteredUsers = () => {
+    console.log('allUsers--', allUsers)
     if (!selectedOrganization) return [];
-    return allUsers.filter(u => u.parent?.parent_id?.toString() === selectedOrganization.toString());
+    return allUsers.filter(
+      u => u.parent_id?.toString() === selectedOrganization
+    );
   };
 
-  const handleSelectAllUsers = (checked: boolean) => {
-    if (checked) {
-      const filteredUsers = getFilteredUsers();
-      setFormData({ ...formData, assignedUsers: filteredUsers.map(u => u.id) });
-    } else {
-      setFormData({ ...formData, assignedUsers: [] });
-    }
-  };
+
 
   const handleUserToggle = (userId: string) => {
     if (formData.assignedUsers.includes(userId)) {
@@ -442,25 +510,67 @@ const Assignments = () => {
       toast.success("Assignment created successfully");
       setIsCreateSheetOpen(false);
       resetForm();
+      await fetchAssignment()
+        .then((assignments) => setAssignments(Array.isArray(assignments) ? assignments : []))
+        .catch(() => setAssignments([]));
       // Optionally refresh assignments
     } catch (error) {
       toast.error("Failed to create assignment");
     }
   };
 
-  const handleEditAssignment = (assignment: Assignment) => {
+  const handleEditAssignment = (assignment: any) => {
     setSelectedAssignment(assignment);
-    const userIds = assignment.users.map(name =>
-      allUsers.find(u => u.name === name)?.id || ""
-    ).filter(Boolean);
 
+    // 1️⃣ Detect type
+    const type = assignment.assignment_type as "ROLE_PLAY" | "CERTIFICATE";
+    setAssignmentType(type);
+
+    // 2️⃣ Extract due date & time from due_at
+    const dueAt = new Date(assignment.due_at);
+    const dueDate = dueAt.toISOString().split("T")[0];
+    const dueTime = dueAt.toTimeString().slice(0, 5);
+
+    // 3️⃣ Extract roleplay or certificate
+    let rolePlayIds: string[] = [];
+    let certificateId = "";
+    let orgId = "";
+
+    if (type === "ROLE_PLAY" && assignment.rolePlays?.length > 0) {
+      rolePlayIds = assignment.rolePlays.map((rp: any) =>
+        rp.rolePlay.id.toString()
+      );
+      orgId = assignment.rolePlays[0].rolePlay.organization_id?.toString();
+    }
+    console.log('assignment--', assignment)
+
+    if (type === "CERTIFICATE" && assignment.certificate) {
+      certificateId = assignment.certificate.id.toString();
+
+      // Get org id from certificate's organizations array
+      orgId =
+        assignment.certificate.organizations?.[0]?.organization_id?.toString() || "";
+
+      // Set selected organization before setting formData
+      setSelectedOrganization(orgId);
+    }
+
+    // 4️⃣ Extract users
+    const userIds = assignment.users?.map((u: any) => u.user_id.toString()) || [];
+
+    // 5️⃣ Set organization
+    setSelectedOrganization(orgId);
+
+    // 6️⃣ Set form data correctly
     setFormData({
       name: assignment.name,
-      role_play_id: assignment.rolePlays[0]?.role_play_id?.toString(),
-      dueDate: assignment.dueDate,
-      dueTime: assignment.dueTime,
+      rolePlayIds,
+      certificateId,
+      dueDate,
+      dueTime,
       assignedUsers: userIds
     });
+
     setIsEditSheetOpen(true);
   };
 
@@ -468,7 +578,7 @@ const Assignments = () => {
     if (!selectedAssignment) return;
 
     if (!formData.name || !formData.dueDate || !formData.dueTime ||
-      (assignmentType === "ROLE_PLAY" && !formData.sessionId) ||
+      (assignmentType === "ROLE_PLAY" && (!formData.rolePlayIds || formData.rolePlayIds.length === 0)) ||
       (assignmentType === "CERTIFICATE" && !formData.certificateId)) {
       toast.error("Please fill in all required fields");
       return;
@@ -482,6 +592,9 @@ const Assignments = () => {
       setIsEditSheetOpen(false);
       setSelectedAssignment(null);
       resetForm();
+      await fetchAssignment()
+        .then((assignments) => setAssignments(Array.isArray(assignments) ? assignments : []))
+        .catch(() => setAssignments([]));
       // Optionally refresh assignments
     } catch (error) {
       toast.error("Failed to update assignment");
@@ -538,17 +651,17 @@ const Assignments = () => {
             <p className="text-muted-foreground mt-2">Assign roleplays to users with due dates and track progress</p>
           </div>
           {can(PERMISSIONS.ASSIGNMENT_CREATE) && (
-          <Button
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-            onClick={() => {
-              handleCreateAssignment();
-              resetForm();
-              setIsCreateSheetOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Assignment
-          </Button>
+            <Button
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+              onClick={() => {
+
+                resetForm();
+                setIsCreateSheetOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Assignment
+            </Button>
           )}
         </div>
 
@@ -589,13 +702,13 @@ const Assignments = () => {
               </TableHeader>
               <TableBody>
                 {filteredAssignments.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                          <p>No assignments found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                      <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                      <p>No assignments found</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
                   filteredAssignments.map((assignment) => (
                     <TableRow key={assignment.id} className="border-border/50 hover:bg-muted/30">
                       <TableCell>
@@ -628,32 +741,32 @@ const Assignments = () => {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {can(PERMISSIONS.ASSIGNMENT_UPDATE) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            onClick={() => handleEditAssignment(assignment)}
-                          >
-                            <Edit className="h-3.5 w-3.5 mr-1.5" />
-                            Edit
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => handleEditAssignment(assignment)}
+                            >
+                              <Edit className="h-3.5 w-3.5 mr-1.5" />
+                              Edit
+                            </Button>
                           )}
                           {can(PERMISSIONS.ASSIGNMENT_DELETE) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDeleteClick(assignment)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                            Delete
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteClick(assignment)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                              Delete
+                            </Button>
                           )}
                         </div>
                       </TableCell>
                     </TableRow>
                   )))
-              }
+                }
               </TableBody>
             </Table>}
           </CardContent>
@@ -675,7 +788,7 @@ const Assignments = () => {
               formData={formData}
               setFormData={setFormData}
               assignmentType={assignmentType}
-              setAssignmentType={setAssignmentType}
+              setAssignmentType={handleAssignmentTypeChange}
               selectedOrganization={selectedOrganization}
               setSelectedOrganization={setSelectedOrganization}
               users={users}
@@ -683,8 +796,10 @@ const Assignments = () => {
               certificates={certificates}
               organizations={organizations}
               getFilteredUsers={getFilteredUsers}
-              filteredRolePlays={rolePlays.filter(rp => rp.organization === selectedOrganization)}  // <-- ADD THIS
-              filteredCertificates={certificates.filter(c => c.organization === selectedOrganization)} // optional for certificates dropdown
+              filteredRolePlays={filteredRolePlays}
+              filteredCertificates={filteredCertificates}
+              handleSelectAllUsers={handleSelectAllUsers}
+              handleUserToggle={handleUserToggle}
             />
           </div>
 
@@ -698,12 +813,12 @@ const Assignments = () => {
                 Cancel
               </Button>
               {can(PERMISSIONS.ASSIGNMENT_CREATE) && (
-              <Button
-                onClick={handleCreateAssignment}
-                className="flex-1 bg-gradient-primary hover:shadow-glow"
-              >
-                Add Assignment
-              </Button>
+                <Button
+                  onClick={handleCreateAssignment}
+                  className="flex-1 bg-gradient-primary hover:shadow-glow"
+                >
+                  Add Assignment
+                </Button>
               )}
             </div>
           </SheetFooter>
@@ -725,7 +840,7 @@ const Assignments = () => {
               formData={formData}
               setFormData={setFormData}
               assignmentType={assignmentType}
-              setAssignmentType={setAssignmentType}
+              setAssignmentType={handleAssignmentTypeChange}
               selectedOrganization={selectedOrganization}
               setSelectedOrganization={setSelectedOrganization}
               users={users}
@@ -733,8 +848,10 @@ const Assignments = () => {
               certificates={certificates}
               organizations={organizations}
               getFilteredUsers={getFilteredUsers}
-              filteredRolePlays={rolePlays.filter(rp => rp.organization === selectedOrganization)}  // <-- ADD THIS
-              filteredCertificates={certificates.filter(c => c.organization === selectedOrganization)} // optional for certificates dropdown
+              filteredRolePlays={filteredRolePlays}
+              filteredCertificates={filteredCertificates}
+              handleSelectAllUsers={handleSelectAllUsers}
+              handleUserToggle={handleUserToggle}
             />
           </div>
 
@@ -748,12 +865,12 @@ const Assignments = () => {
                 Cancel
               </Button>
               {can(PERMISSIONS.ASSIGNMENT_UPDATE) && (
-              <Button
-                onClick={handleUpdateAssignment}
-                className="flex-1 bg-gradient-primary hover:shadow-glow"
-              >
-                Update Assignment
-              </Button>
+                <Button
+                  onClick={handleUpdateAssignment}
+                  className="flex-1 bg-gradient-primary hover:shadow-glow"
+                >
+                  Update Assignment
+                </Button>
               )}
             </div>
           </SheetFooter>

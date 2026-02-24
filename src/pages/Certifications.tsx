@@ -53,20 +53,25 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
   const [rolePlaySearchQuery, setRolePlaySearchQuery] = useState("");
   const [iconSearchQuery, setIconSearchQuery] = useState("");
 
-  const toggleOrganization = (id: number) => {
-    const idStr = id.toString();
-    if (formData.organization_ids.includes(idStr)) {
-      setFormData({
-        ...formData,
-        organization_ids: formData.organization_ids.filter((orgId: string) => orgId !== idStr),
-      });
-    } else {
-      setFormData({
-        ...formData,
-        organization_ids: [...formData.organization_ids, idStr],
-      });
-    }
-  };
+const toggleOrganization = (id: number) => {
+  const idStr = id.toString();
+
+  if (formData.organization_ids.includes(idStr)) {
+    // unselect
+    setFormData({
+      ...formData,
+      organization_ids: [],
+      role_play_ids: [], // reset roleplays when org removed
+    });
+  } else {
+    // replace with single value (still array)
+    setFormData({
+      ...formData,
+      organization_ids: [idStr],
+      role_play_ids: [], // reset roleplays when org changes
+    });
+  }
+};
 
   const toggleRolePlay = (id: number) => {
     const idStr = id.toString();
@@ -124,7 +129,15 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
     org.name.toLowerCase().includes(orgSearchQuery.toLowerCase())
   );
 
-  const filteredRolePlays = allRoleplays.filter((rp) =>
+ const selectedOrgId = formData.organization_ids[0];
+
+const filteredRolePlays = allRoleplays
+  .filter((rp) => {
+    // match organization first
+    if (!selectedOrgId) return false;
+    return rp.organization_id?.toString() === selectedOrgId;
+  })
+  .filter((rp) =>
     rp.name.toLowerCase().includes(rolePlaySearchQuery.toLowerCase())
   );
 

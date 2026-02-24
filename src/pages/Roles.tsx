@@ -545,7 +545,14 @@ const Roles = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {roles.length === 0 ? (
+                  {roles
+                    .filter((role) => {
+                      const matchesSearch = role.name.toLowerCase().includes(searchQuery?.toLowerCase()) ||
+                        getOrganizationName(organizations, role.parent_id).toLowerCase().includes(searchQuery?.toLowerCase());
+                      const matchesOrg = orgFilter === "all" || (orgFilter === searchQuery?.toLowerCase()) || (orgFilter === getOrganizationName(organizations, role.parent_id)) ||
+                        (orgFilter === "all" && role.organization === "All Organizations");
+                      return matchesSearch && matchesOrg;
+                    }).length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                           <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />

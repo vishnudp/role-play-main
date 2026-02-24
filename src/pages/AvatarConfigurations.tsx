@@ -47,7 +47,7 @@ import { usePermission } from '@/hooks/usePermission';
 
 
 const AvatarConfigurations = () => {
-   const { can } = usePermission();
+  const { can } = usePermission();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<any>(null);
   const [organizations, setOrganizations] = useState<any[]>([]);
@@ -72,23 +72,49 @@ const AvatarConfigurations = () => {
     async function loadData() {
       setLoading(true);
       try {
-        await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
-          .catch(() => setOrganizations(getLoginUserOrganization()));
-       
-        await fetchUsers()
-          .then((users) => setUsers(Array.isArray(users) ? users : []))
-          .catch(() => setUsers([]));
-        const configs = await fetchAvatarConfigurations();
-console.log("Avatar API response:", configs);
+        // Fetch organizations
+        let orgs = [];
+        try {
+          orgs = await fetchOrganizations();
+          orgs = Array.isArray(orgs) ? orgs : getLoginUserOrganization();
+        } catch (err) {
+          orgs = getLoginUserOrganization();
+        }
+        setOrganizations(orgs);
 
-setAvatarConfigurations(
-  Array.isArray(configs?.data) ? configs.data : []
-);
+        // Fetch users
+        let usersList = [];
+        try {
+          usersList = await fetchUsers();
+          usersList = Array.isArray(usersList) ? usersList : [];
+        } catch (err) {
+          usersList = [];
+        }
+        setUsers(usersList);
+
+        // Fetch avatar configurations
+        let configs = [];
+        try {
+          const apiResponse = await fetchAvatarConfigurations();
+          console.log("Full Avatar API response:", apiResponse);
+
+          // Determine if API returns array directly or under data
+          if (Array.isArray(apiResponse)) {
+            configs = apiResponse;
+          } else if (Array.isArray(apiResponse?.data)) {
+            configs = apiResponse.data;
+          } else {
+            configs = [];
+          }
+        } catch (err) {
+          configs = [];
+        }
+        setAvatarConfigurations(configs);
       } finally {
         setLoading(false);
       }
     }
+
     loadData();
   }, []);
 
@@ -170,10 +196,10 @@ setAvatarConfigurations(
             </p>
           </div>
           {can(PERMISSIONS.AVATAR_CONFIG_CREATE) && (
-          <Button onClick={() => setIsUploadSheetOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Avatar Configuration
-          </Button>
+            <Button onClick={() => setIsUploadSheetOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Avatar Configuration
+            </Button>
           )}
         </div>
 
@@ -223,78 +249,79 @@ setAvatarConfigurations(
                   </TableHeader>
                   <TableBody>
                     {
-                    
-                    filteredAvatarConfigurations.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-12 text-muted-foreground">
-                          <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                          <p>No avatar configurations found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredAvatarConfigurations.map((doc) => (
-                        <TableRow key={doc.id} className="group">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                {getFileIcon(doc.type)}
-                              </div>
-                              <div>
-                                <p className="font-medium text-foreground">{doc.avatar_name}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{doc.avatar_id}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="font-normal">
-                              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
-                                {doc?.photo ? (
-                                  <img
-                                    src={`${API_BASE_URL}${doc.photo}`}
-                                    alt={doc.avatar_name}
-                                    className="w-full h-full object-cover"
-                                    crossOrigin="anonymous"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-                                    }}
-                                  />
-                                ) : (
-                                  <span className="text-xs font-semibold text-gray-500 leading-none">
-                                    {doc?.avatar_name?.charAt(0)?.toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {can(PERMISSIONS.AVATAR_CONFIG_READ) && (
-                                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
-                                  <Eye className="h-4 w-4" />
-                                  View
-                                </DropdownMenuItem>
-                                )}
-                                {can(PERMISSIONS.AVATAR_CONFIG_DELETE) && (
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                  onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+
+                      filteredAvatarConfigurations.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-12 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                            <p>No avatar configurations found</p>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
+                      ) : (
+                        filteredAvatarConfigurations.map((doc) => (
+                          <TableRow key={doc.id} className="group">
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                  {getFileIcon(doc.type)}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-foreground">{doc.avatar_name}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{doc.avatar_id}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="font-normal">
+                                <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
+                                  {doc?.photo ? (
+                                    <a href={`${API_BASE_URL}/${doc.photo}`} target="_blank" rel="noopener noreferrer">
+                                      <img
+                                        src={`${API_BASE_URL}/${doc.photo}`}
+                                        alt={doc.avatar_name}
+                                        className="w-full h-full object-cover cursor-pointer"
+                                        loading="lazy"
+                                        crossOrigin="anonymous"
+                                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                      />
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs font-semibold text-gray-500 leading-none">
+                                      {doc?.avatar_name?.charAt(0)?.toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {can(PERMISSIONS.AVATAR_CONFIG_READ) && (
+                                    <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
+                                      <Eye className="h-4 w-4" />
+                                      View
+                                    </DropdownMenuItem>
+                                  )}
+                                  {can(PERMISSIONS.AVATAR_CONFIG_DELETE) && (
+                                    <DropdownMenuItem
+                                      className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                      onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                   </TableBody>
                 </Table>}
             </div>
