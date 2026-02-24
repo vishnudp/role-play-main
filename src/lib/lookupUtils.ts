@@ -117,3 +117,14 @@ export async function handleDownload(doc: any)  {
     toast.error("Failed to download file");
   }
 };
+
+export function getLoginUserOrganization() {
+  try {
+    const loginUser = JSON.parse(localStorage.getItem('user') || '{}');
+    let obj  = {id:loginUser?.role?.id, name: loginUser?.role?.name}
+    let objArr = [obj];
+    return objArr || [];
+  } catch (e) {
+    return [];
+  }
+}

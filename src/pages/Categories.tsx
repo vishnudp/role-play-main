@@ -64,6 +64,8 @@ import {
   AlertDialogDescription,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"; // ShadCN AlertDialog
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 interface SubCategory {
   id: string;
   name: string;
@@ -81,6 +83,7 @@ interface Category {
 }
 
 const Categories = () => {
+   const { can } = usePermission();
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -344,10 +347,12 @@ const Categories = () => {
               Manage categories and subcategories for roleplay sessions
             </p>
           </div>
+          {can(PERMISSIONS.CATEGORY_CREATE) && (
           <Button onClick={() => { resetCategoryForm(); setIsCategorySheetOpen(true); }} className="gap-2">
             <Plus className="h-4 w-4" />
             Add Category
           </Button>
+          )}
         </div>
 
         {/* Stats */}
@@ -476,6 +481,7 @@ const Categories = () => {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
+                                  {can(PERMISSIONS.CATEGORY_CREATE) && (
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -485,6 +491,7 @@ const Categories = () => {
                                     <Plus className="h-3 w-3 mr-1" />
                                     Add Sub
                                   </Button>
+                                  )}
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -492,6 +499,7 @@ const Categories = () => {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
+                                      {can(PERMISSIONS.CATEGORY_UPDATE) && (
                                       <DropdownMenuItem
                                         className="gap-2 cursor-pointer"
                                         onClick={() => openEditCategorySheet(category)}
@@ -499,6 +507,8 @@ const Categories = () => {
                                         <Pencil className="h-4 w-4" />
                                         Edit
                                       </DropdownMenuItem>
+                                      )}
+                                      {can(PERMISSIONS.CATEGORY_DELETE) && (
                                       <DropdownMenuItem
                                         className="gap-2 cursor-pointer text-destructive focus:text-destructive"
                                         onClick={() => confirmDelete("category", category.id, category.name)}
@@ -506,6 +516,7 @@ const Categories = () => {
                                         <Trash2 className="h-4 w-4" />
                                         Delete
                                       </DropdownMenuItem>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -545,6 +556,7 @@ const Categories = () => {
                                           </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
+                                          {can(PERMISSIONS.CATEGORY_UPDATE) && (
                                           <DropdownMenuItem
                                             className="gap-2 cursor-pointer"
                                             onClick={() => openEditSubCategorySheet(category, subCategory)}
@@ -552,6 +564,8 @@ const Categories = () => {
                                             <Pencil className="h-4 w-4" />
                                             Edit
                                           </DropdownMenuItem>
+                                          )}
+                                          {can(PERMISSIONS.CATEGORY_DELETE) && (
                                           <DropdownMenuItem
                                             className="gap-2 cursor-pointer text-destructive focus:text-destructive"
                                             onClick={() => confirmDelete("subCategory", category.id, subCategory.name, subCategory.id)}
@@ -559,6 +573,7 @@ const Categories = () => {
                                             <Trash2 className="h-4 w-4" />
                                             Delete
                                           </DropdownMenuItem>
+                                          )}
                                         </DropdownMenuContent>
                                       </DropdownMenu>
                                     </TableCell>
@@ -630,9 +645,11 @@ const Categories = () => {
             <Button variant="outline" onClick={() => { resetCategoryForm(); setIsCategorySheetOpen(false); }}>
               Cancel
             </Button>
+              {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
             <Button onClick={isEditMode ? handleEditCategory : handleAddCategory}>
               {isEditMode ? "Update Category" : "Add Category"}
             </Button>
+              )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -714,9 +731,11 @@ const Categories = () => {
             <Button variant="outline" onClick={() => { resetSubCategoryForm(); setIsSubCategorySheetOpen(false); }}>
               Cancel
             </Button>
+              {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
             <Button onClick={isEditMode ? handleEditSubCategory : handleAddSubCategory}>
               {isEditMode ? "Update Subcategory" : "Add Subcategory"}
             </Button>
+              )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -732,9 +751,11 @@ const Categories = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            {can(PERMISSIONS.CATEGORY_DELETE) && (
             <Button variant="destructive" onClick={handleConfirmDelete}>
               Delete
             </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

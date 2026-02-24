@@ -39,13 +39,15 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fetchOrganizations } from "../api/apiService";
 import { fetchAvatarConfigurations, uploadAvatarConfiguration, deleteAvatarConfiguration, fetchUsers } from "../api/apiService";
-import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File, Eye } from "lucide-react";
 import { API_BASE_URL } from "@/config/apiConfig";
-
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 
 
 const AvatarConfigurations = () => {
+   const { can } = usePermission();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<any>(null);
   const [organizations, setOrganizations] = useState<any[]>([]);
@@ -71,14 +73,18 @@ const AvatarConfigurations = () => {
       setLoading(true);
       try {
         await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
-        await fetchAvatarConfigurations()
-          .then((configs) => setAvatarConfigurations(Array.isArray(configs) ? configs : []))
-          .catch(() => setAvatarConfigurations([]));
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
+       
         await fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
+        const configs = await fetchAvatarConfigurations();
+console.log("Avatar API response:", configs);
+
+setAvatarConfigurations(
+  Array.isArray(configs?.data) ? configs.data : []
+);
       } finally {
         setLoading(false);
       }
@@ -163,10 +169,12 @@ const AvatarConfigurations = () => {
               Upload and manage avatar configurations.
             </p>
           </div>
+          {can(PERMISSIONS.AVATAR_CONFIG_CREATE) && (
           <Button onClick={() => setIsUploadSheetOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Create Avatar Configuration
           </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -214,7 +222,9 @@ const AvatarConfigurations = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAvatarConfigurations.length === 0 ? (
+                    {
+                    
+                    filteredAvatarConfigurations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-12 text-muted-foreground">
                           <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
@@ -264,10 +274,13 @@ const AvatarConfigurations = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                {can(PERMISSIONS.AVATAR_CONFIG_READ) && (
                                 <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
                                   <Eye className="h-4 w-4" />
                                   View
                                 </DropdownMenuItem>
+                                )}
+                                {can(PERMISSIONS.AVATAR_CONFIG_DELETE) && (
                                 <DropdownMenuItem
                                   className="gap-2 cursor-pointer text-destructive focus:text-destructive"
                                   onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
@@ -275,6 +288,7 @@ const AvatarConfigurations = () => {
                                   <Trash2 className="h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

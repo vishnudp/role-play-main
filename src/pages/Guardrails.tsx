@@ -38,7 +38,9 @@ import { toast } from "sonner";
 import { Shield, FileText, Plus, MoreHorizontal, Pencil, Trash2, Search, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchGuardrails, fetchOrganizations, fetchDocuments, fetchUsers, addGuardrail, editGuardrail, deleteGuardrail } from "@/api/apiService";
-import { getOrganizationName } from "../lib/lookupUtils";
+import { getLoginUserOrganization, getOrganizationName } from "../lib/lookupUtils";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 
 // Mock organizations
 // const organizations = [
@@ -104,6 +106,7 @@ interface Guardrail {
   status: "Active" | "Inactive";
   createdAt: string;
 }
+const { can } = usePermission();
 
 const GuardrailForm = ({
   formData,
@@ -341,7 +344,9 @@ const GuardrailForm = ({
       }}>
         Cancel
       </Button>
-      <Button onClick={onSubmit}>{submitLabel}</Button>
+      {can(PERMISSIONS.GUARDRAIL_CREATE) && (
+        <Button onClick={onSubmit}>{submitLabel}</Button>
+      )}
     </SheetFooter>
   </>
 );
@@ -381,7 +386,7 @@ const Guardrails = () => {
         setGuardrails(normalizedGuardrails);
 
         const orgs = await fetchOrganizations();
-        setOrganizations(Array.isArray(orgs) ? orgs : []);
+        setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization());
 
         const docs = await fetchDocuments();
         setDocuments(Array.isArray(docs) ? docs : []);
@@ -391,7 +396,7 @@ const Guardrails = () => {
       } catch (err) {
         console.error(err);
         setGuardrails([]);
-        setOrganizations([]);
+        setOrganizations(getLoginUserOrganization());
         setDocuments([]);
         setUsers([]);
       } finally {
@@ -595,10 +600,12 @@ const Guardrails = () => {
               Define conversation guidelines and compliance rules
             </p>
           </div>
+          {can(PERMISSIONS["GUARDRAIL_CREATE"]) && (
           <Button onClick={() => setIsAddSheetOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Add Guardrail
           </Button>
+          )}
         </div>
 
         {/* Search */}
@@ -705,6 +712,7 @@ const Guardrails = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                {can(PERMISSIONS.GUARDRAIL_UPDATE) && (
                                 <DropdownMenuItem
                                   className="gap-2 cursor-pointer"
                                   onClick={() => openEditSheet(guardrail)}
@@ -712,6 +720,8 @@ const Guardrails = () => {
                                   <Pencil className="h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
+                                )}
+                                {can(PERMISSIONS.GUARDRAIL_DELETE) && (
                                 <DropdownMenuItem
                                   className="gap-2 cursor-pointer text-destructive focus:text-destructive"
                                   onClick={() => handleDeleteGuardrail(guardrail.id)}
@@ -719,6 +729,7 @@ const Guardrails = () => {
                                   <Trash2 className="h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

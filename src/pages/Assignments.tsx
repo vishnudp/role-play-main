@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Calendar, Clock, Check, X } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Calendar, Clock, Check, X, Shield } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,8 +13,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, fetchOrganizations, fetchAssignment, fetchCertificate, createAssignment, updateAssignmentApi, deleteAssignment, fetchRolePlays } from "../api/apiService";
-import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
-
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 
 interface Assignment {
   id: number;
@@ -276,6 +277,7 @@ const AssignmentForm = ({
 
 
 const Assignments = () => {
+   const { can } = usePermission();
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
@@ -338,8 +340,8 @@ const Assignments = () => {
       setLoading(true);
       try {
         await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
         await fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
@@ -535,6 +537,7 @@ const Assignments = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Assignment</h1>
             <p className="text-muted-foreground mt-2">Assign roleplays to users with due dates and track progress</p>
           </div>
+          {can(PERMISSIONS.ASSIGNMENT_CREATE) && (
           <Button
             className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
             onClick={() => {
@@ -546,6 +549,7 @@ const Assignments = () => {
             <Plus className="h-4 w-4 mr-2" />
             Add Assignment
           </Button>
+          )}
         </div>
 
         {/* Search */}
@@ -584,59 +588,72 @@ const Assignments = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssignments.map((assignment) => (
-                  <TableRow key={assignment.id} className="border-border/50 hover:bg-muted/30">
-                    <TableCell>
-                      <p className="font-semibold text-foreground">{assignment.name}</p>
-                    </TableCell>
-                    <TableCell>
-                      {assignment.assignment_type === "ROLE_PLAY" && assignment.rolePlays.length > 0 ? (
-                        <Badge className="bg-orange-500 text-white px-3 py-1 rounded-full">
-                          {assignment.rolePlays[0].rolePlay.name} <span className="ml-1 text-xs">(Roleplay)</span>
+                {filteredAssignments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No assignments found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                  filteredAssignments.map((assignment) => (
+                    <TableRow key={assignment.id} className="border-border/50 hover:bg-muted/30">
+                      <TableCell>
+                        <p className="font-semibold text-foreground">{assignment.name}</p>
+                      </TableCell>
+                      <TableCell>
+                        {assignment.assignment_type === "ROLE_PLAY" && assignment.rolePlays.length > 0 ? (
+                          <Badge className="bg-orange-500 text-white px-3 py-1 rounded-full">
+                            {assignment.rolePlays[0].rolePlay.name} <span className="ml-1 text-xs">(Roleplay)</span>
+                          </Badge>
+                        ) : assignment.assignment_type === "CERTIFICATE" && assignment.certificate ? (
+                          <Badge className="bg-cyan-500 text-white px-3 py-1 rounded-full">
+                            {assignment.certificate.name} <span className="ml-1 text-xs">(Certificate)</span>
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="px-3 py-1 rounded-full">N/A</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-foreground">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{formatToLongDate(assignment.updated_at)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(assignment.is_active ? "In Progress" : "Completed")} className="px-3 py-1 rounded-full" >
+                          {assignment.is_active ? "In Progress" : "Completed"}
                         </Badge>
-                      ) : assignment.assignment_type === "CERTIFICATE" && assignment.certificate ? (
-                        <Badge className="bg-cyan-500 text-white px-3 py-1 rounded-full">
-                          {assignment.certificate.name} <span className="ml-1 text-xs">(Certificate)</span>
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="px-3 py-1 rounded-full">N/A</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-foreground">
-                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{formatToLongDate(assignment.updated_at)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(assignment.is_active ? "In Progress" : "Completed")} className="px-3 py-1 rounded-full" >
-                        {assignment.is_active ? "In Progress" : "Completed"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8"
-                          onClick={() => handleEditAssignment(assignment)}
-                        >
-                          <Edit className="h-3.5 w-3.5 mr-1.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteClick(assignment)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {can(PERMISSIONS.ASSIGNMENT_UPDATE) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => handleEditAssignment(assignment)}
+                          >
+                            <Edit className="h-3.5 w-3.5 mr-1.5" />
+                            Edit
+                          </Button>
+                          )}
+                          {can(PERMISSIONS.ASSIGNMENT_DELETE) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteClick(assignment)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            Delete
+                          </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )))
+              }
               </TableBody>
             </Table>}
           </CardContent>
@@ -680,12 +697,14 @@ const Assignments = () => {
               >
                 Cancel
               </Button>
+              {can(PERMISSIONS.ASSIGNMENT_CREATE) && (
               <Button
                 onClick={handleCreateAssignment}
                 className="flex-1 bg-gradient-primary hover:shadow-glow"
               >
                 Add Assignment
               </Button>
+              )}
             </div>
           </SheetFooter>
         </SheetContent>
@@ -728,12 +747,14 @@ const Assignments = () => {
               >
                 Cancel
               </Button>
+              {can(PERMISSIONS.ASSIGNMENT_UPDATE) && (
               <Button
                 onClick={handleUpdateAssignment}
                 className="flex-1 bg-gradient-primary hover:shadow-glow"
               >
                 Update Assignment
               </Button>
+              )}
             </div>
           </SheetFooter>
         </SheetContent>

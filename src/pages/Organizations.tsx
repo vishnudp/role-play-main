@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, MapPin, FileText, X, Upload, Tag, Edit } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, FileText, X, Upload, Tag, Edit, Shield } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
 import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, fetchOrganizations, addOrganizations, editOrganizations, deleteOrganizations } from "../api/apiService";
-import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -37,7 +37,7 @@ interface Document {
 }
 
 const Organizations = () => {
-  const { hasPermission } = usePermission();
+  const { can } = usePermission();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<any>(null);
@@ -82,8 +82,8 @@ const Organizations = () => {
       setLoading(true);
       try {
         await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
         await fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
@@ -335,13 +335,16 @@ const Organizations = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Organizations</h1>
             <p className="text-muted-foreground mt-2">Manage multi-tenant organizations and their isolated data spaces</p>
           </div>
-          <Button
-            onClick={() => setIsAddSheetOpen(true)}
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Organization
-          </Button>
+          {/* Only render if user has ORG_CREATE permission */}
+          {can(PERMISSIONS.ORG_CREATE) && (
+            <Button
+              onClick={() => setIsAddSheetOpen(true)}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Organization
+            </Button>
+          )}
         </div>
 
         {/* Search */}
@@ -375,7 +378,16 @@ const Organizations = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {organizations
+                  {
+                  organizations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No organizations found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                  organizations
                     .filter((org) => {
                       const query = searchQuery.toLowerCase();
                       return (
@@ -396,17 +408,23 @@ const Organizations = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
+                            {can(PERMISSIONS.ORG_UPDATE) && (
                             <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditOrg(org)}>
                               <Edit className="h-3.5 w-3.5 mr-1.5" />
                               Edit
                             </Button>
+                            )}
+
+                            {can(PERMISSIONS.ORG_READ) && (
 
                             <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewOrg(org)}>
                               View
                             </Button>
+                            )}
 
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
+                                {can(PERMISSIONS.ORG_DELETE) && (
                                 <Button
                                   variant="destructive"
                                   size="sm"
@@ -415,6 +433,7 @@ const Organizations = () => {
                                 >
                                   Delete
                                 </Button>
+                                )}
                               </AlertDialogTrigger>
 
                               <AlertDialogContent>
@@ -448,7 +467,7 @@ const Organizations = () => {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )))}
                 </TableBody>
               </Table>
             }
@@ -472,19 +491,19 @@ const Organizations = () => {
                       <div className="space-y-2">
                         <Label htmlFor="entity-name">Entity Name *</Label>
                         <Input id="entity-name" placeholder="Enter entity name" required value={formData.name}
-  onChange={(e) => handleInputChange("name", e.target.value)}/>
+                          onChange={(e) => handleInputChange("name", e.target.value)} />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="entity-address">Entity Address</Label>
                         <Input id="entity-address" placeholder="Enter address" value={formData.address}
-  onChange={(e) => handleInputChange("address", e.target.value)}/>
+                          onChange={(e) => handleInputChange("address", e.target.value)} />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="description">Description</Label>
                       <Textarea id="description" placeholder="Enter organization description" rows={3} value={formData.description}
-  onChange={(e) => handleInputChange("description", e.target.value)}/>
+                        onChange={(e) => handleInputChange("description", e.target.value)} />
                     </div>
                   </div>
 
@@ -495,12 +514,12 @@ const Organizations = () => {
                       <div className="space-y-2">
                         <Label htmlFor="login-email">Login Email *</Label>
                         <Input id="login-email" type="email" placeholder="login@example.com" required value={formData.email}
-  onChange={(e) => handleInputChange("email", e.target.value)}/>
+                          onChange={(e) => handleInputChange("email", e.target.value)} />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="login-password">Password *</Label>
                         <Input id="login-password" type="password" placeholder="Enter password" required value={formData.password}
-  onChange={(e) => handleInputChange("password", e.target.value)}/>
+                          onChange={(e) => handleInputChange("password", e.target.value)} />
                       </div>
                     </div>
                   </div>
@@ -514,12 +533,12 @@ const Organizations = () => {
                       <div className="space-y-2">
                         <Label htmlFor="contact-name">Contact Name</Label>
                         <Input id="contact-name" type="text" placeholder="Enter contact name" value={formData.contact_person_name}
-  onChange={(e) => handleInputChange("contact_person_name", e.target.value)}/>
+                          onChange={(e) => handleInputChange("contact_person_name", e.target.value)} />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="contact-email">Contact Email</Label>
                         <Input id="contact-email" type="email" placeholder="contact@example.com" value={formData.contact_person_email}
-  onChange={(e) => handleInputChange("contact_person_email", e.target.value)}/>
+                          onChange={(e) => handleInputChange("contact_person_email", e.target.value)} />
                       </div>
 
                     </div>
@@ -527,8 +546,8 @@ const Organizations = () => {
 
                       <div className="space-y-2">
                         <Label htmlFor="contact-phone">Contact Phone</Label>
-                        <Input id="contact-phone" type="tel" placeholder="+1 234 567 8900"  value={formData.contact_person_phone}
-  onChange={(e) => handleInputChange("contact_person_phone", e.target.value)}/>
+                        <Input id="contact-phone" type="tel" placeholder="+1 234 567 8900" value={formData.contact_person_phone}
+                          onChange={(e) => handleInputChange("contact_person_phone", e.target.value)} />
                       </div>
                     </div>
                   </div>
@@ -540,7 +559,7 @@ const Organizations = () => {
                       <p className="text-sm text-muted-foreground">Enable this organization</p>
                     </div>
                     <Switch id="active-status" checked={formData.is_active}
-  onCheckedChange={(val) => handleInputChange("is_active", val)} />
+                      onCheckedChange={(val) => handleInputChange("is_active", val)} />
                   </div>
                 </div>
               </div>
@@ -552,9 +571,11 @@ const Organizations = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsAddSheetOpen(false)}>
                   Cancel
                 </Button>
+                {can(PERMISSIONS.ORG_CREATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleCreateOrganization}>
                   Create Organization
                 </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -655,9 +676,11 @@ const Organizations = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsEditSheetOpen(false)}>
                   Cancel
                 </Button>
+                {can(PERMISSIONS.ORG_UPDATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleUpdateOrganization}>
                   Save Changes
                 </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>

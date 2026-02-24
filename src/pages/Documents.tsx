@@ -39,11 +39,13 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fetchOrganizations } from "../api/apiService";
 import { fetchDocuments, uploadDocument, uploadDocumentExternal, deleteDocument, fetchUsers } from "../api/apiService";
-import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File, Eye } from "lucide-react";
-
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 
 const Documents = () => {
+  const { can } = usePermission();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<any>(null);
   const [organizations, setOrganizations] = useState<any[]>([]);
@@ -68,8 +70,8 @@ const Documents = () => {
       setLoading(true);
       try {
         await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
         await fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
@@ -163,10 +165,12 @@ const Documents = () => {
               Upload and manage organizational documents
             </p>
           </div>
+          {can(PERMISSIONS.DOCUMENT_CREATE) && (
           <Button onClick={() => setIsUploadSheetOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Upload Document
           </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -273,14 +277,19 @@ const Documents = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                {can(PERMISSIONS.DOCUMENT_READ) && (
                                 <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
                                   <Eye className="h-4 w-4" />
                                   View
                                 </DropdownMenuItem>
+                                )}
+                                {can(PERMISSIONS.DOCUMENT_READ) && (
                                 <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleDownload(doc)}>
                                   <Download className="h-4 w-4" />
                                   Download
                                 </DropdownMenuItem>
+                                )}
+                                {can(PERMISSIONS.DOCUMENT_DELETE) && (
                                 <DropdownMenuItem
                                   className="gap-2 cursor-pointer text-destructive focus:text-destructive"
                                   onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
@@ -288,6 +297,7 @@ const Documents = () => {
                                   <Trash2 className="h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

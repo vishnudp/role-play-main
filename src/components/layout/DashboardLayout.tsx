@@ -1,5 +1,5 @@
 // src/layouts/DashboardLayout.tsx
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
@@ -33,29 +33,60 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from "@/hooks/usePermission";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Organizations", href: "/organizations", icon: Building2 },
-  { name: "Role Management", href: "/roles", icon: Shield },
-  { name: "User Management", href: "/users", icon: Users },
-  { name: "Categories", href: "/categories", icon: FolderTree },
-  { name: "Roleplays", href: "/role-plays", icon: Clock },
-  { name: "Assignment", href: "/assignment", icon: Target },
-  { name: "Avatar Builder", href: "/avatars", icon: Bot },
-  { name: "Pre-call Plans", href: "/precall-plans", icon: ClipboardList },
-  { name: "Guardrails", href: "/guardrails", icon: ShieldCheck },
-  { name: "Documents", href: "/documents", icon: FileText },
-  { name: "Certifications", href: "/certifications", icon: FileText },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: PERMISSIONS.USER_READ },
+  { name: "Organizations", href: "/organizations", icon: Building2, permission: PERMISSIONS.ORG_READ },
+  { name: "Role Management", href: "/roles", icon: Shield, permission: PERMISSIONS.ROLE_READ },
+  { name: "User Management", href: "/users", icon: Users, permission: PERMISSIONS.USER_READ },
+  { name: "Categories", href: "/categories", icon: FolderTree, permission: PERMISSIONS.CATEGORY_READ },
+  { name: "Roleplays", href: "/role-plays", icon: Clock, permission: PERMISSIONS.ROLEPLAY_READ },
+  { name: "Assignment", href: "/assignment", icon: Target, permission: PERMISSIONS.ASSIGNMENT_READ },
+  { name: "Avatar Builder", href: "/avatars", icon: Bot, permission: PERMISSIONS.AVATAR_READ },
+  { name: "Pre-call Plans", href: "/precall-plans", icon: ClipboardList, permission: PERMISSIONS.PRE_CALL_PLAN_READ },
+  { name: "Guardrails", href: "/guardrails", icon: ShieldCheck, permission: PERMISSIONS.GUARDRAIL_READ },
+  { name: "Documents", href: "/documents", icon: FileText, permission: PERMISSIONS.DOCUMENT_READ },
+  { name: "Certifications", href: "/certifications", icon: FileText, permission: PERMISSIONS.CERTIFICATION_READ },
+];
+
+const settingsRoutes = [
+  {
+    name: "Avatar Configuration",
+    href: "/avatar-configuration",
+    permission: PERMISSIONS.AVATAR_CONFIG_READ,
+  },
 ];
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const { can } = usePermission();
   const location = useLocation();
   const navigate = useNavigate();
+
+   // Filter navigation items based on permission
+  const accessibleNav = navigation.filter((item) => !item.permission || can(item.permission));
+
+  const accessibleSettings = settingsRoutes.filter(
+  (item) => !item.permission || can(item.permission)
+);
+
+const allAccessibleRoutes = [...accessibleNav, ...accessibleSettings];
+
+  // Redirect on initial load if current path is not accessible
+  useEffect(() => {
+    if (allAccessibleRoutes.length === 0) return; // no accessible routes
+
+    const currentAccessible = allAccessibleRoutes.find((item) => location.pathname.startsWith(item.href));
+    if (!currentAccessible) {
+      // Redirect to the first accessible route
+      navigate(allAccessibleRoutes[0].href, { replace: true });
+    }
+  }, [allAccessibleRoutes, location.pathname, navigate]);
 
   // Dialog state
   const [open, setOpen] = useState(false);
@@ -87,7 +118,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {navigation.map((item) => {
+          {navigation.map((item: any) => {
+            if (item.permission && !can(item.permission)) return null;
             const isActive = location.pathname === item.href;
             return (
               <Link
@@ -130,13 +162,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Submenu items */}
           {settingsOpen && (
             <div className="pl-10 flex flex-col gap-1">
-              <Link
-                to="/avatar-configuration"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground transition-all duration-200"
-              >
-                Avatar Configuration
-              </Link>
-              {/* Add more submenu items here if needed */}
+              {/* Only show if user has ROLE_CREATE or ORG_CREATE permission */}
+              {can(PERMISSIONS.AVATAR_CONFIG_READ) && (
+                <Link
+                  to="/avatar-configuration"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground transition-all duration-200"
+                >
+                  Avatar Configuration
+                </Link>
+              )}
+              {/* Add more submenu items here with similar permission checks */}
             </div>
           )}
 

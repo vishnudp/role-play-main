@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useEffect, useState } from "react";
 import { fetchOrganizations, fetchRolePlays, fetchRoles } from "../api/apiService";
 import { fetchDocuments, fetchMetaData, uploadDocument, deleteDocument, fetchUsers, createRole, updateRoleApi, deleteRoleApi } from "../api/apiService";
-import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 interface Permission {
   module: string;
   [action: string]: boolean | string;
@@ -46,6 +48,7 @@ interface Role {
 
 
 const Roles = () => {
+  const { can } = usePermission();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
@@ -68,8 +71,8 @@ const Roles = () => {
       setLoading(true);
       try {
         await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
         await fetchRoles()
           .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
           .catch(() => setRoles([]));
@@ -114,6 +117,9 @@ const Roles = () => {
       setRoles((prev) => prev.filter((r) => r.id !== roleToDelete.id)); // remove from UI
       setIsDeleteDialogOpen(false);
       setRoleToDelete(null);
+       await fetchRoles()
+          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+          .catch(() => setRoles([]));
       toast.success("Role deleted successfully");
 
     } catch (error) {
@@ -184,6 +190,9 @@ const Roles = () => {
       setIsAddSheetOpen(false);
       setAddDescription("");
       setSelectedOrgId("all"); // reset
+       await fetchRoles()
+          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+          .catch(() => setRoles([]));
       toast.success("Role created successfully");
     } catch (err) {
       console.error(err);
@@ -208,6 +217,9 @@ const Roles = () => {
       const updatedRole = await updateRoleApi(selectedRole.id, payload); // API call
       setRoles((prev) => prev.map((r) => (r.id === selectedRole.id ? updatedRole : r)));
       setIsEditSheetOpen(false);
+       await fetchRoles()
+          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+          .catch(() => setRoles([]));
       toast.success("Role updated successfully");
     } catch (err) {
       console.error(err);
@@ -470,6 +482,7 @@ const Roles = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Role Management</h1>
             <p className="text-muted-foreground mt-2">Manage RBAC permissions and custom roles for organizations</p>
           </div>
+          {can(PERMISSIONS.ROLE_CREATE) && (
           <Button
             onClick={handleOpenAddSheet}
             className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
@@ -477,6 +490,7 @@ const Roles = () => {
             <Plus className="h-4 w-4 mr-2" />
             Create Role
           </Button>
+          )}
         </div>
 
         {/* Search & Filters */}
@@ -531,7 +545,15 @@ const Roles = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {roles
+                  {roles.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No roles found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                  roles
                     .filter((role) => {
                       const matchesSearch = role.name.toLowerCase().includes(searchQuery?.toLowerCase()) ||
                         getOrganizationName(organizations, role.parent_id).toLowerCase().includes(searchQuery?.toLowerCase());
@@ -561,20 +583,28 @@ const Roles = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
+                            {can(PERMISSIONS.ROLE_UPDATE) && (
                             <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRole(role)}>
                               <Edit className="h-3.5 w-3.5 mr-1.5" />
                               Edit
                             </Button>
+                            )}
+                            {can(PERMISSIONS.ROLE_READ) && (
                             <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewRole(role)}>
                               View
                             </Button>
+                            )}
+                            {can(PERMISSIONS.ROLE_DELETE) && (
                             <Button variant="destructive" size="sm" className="h-8" onClick={() => handleDeleteClick(role)}>
                               Delete
                             </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ))
+                  )}
+                  
                 </TableBody>
               </Table>
             }
@@ -656,9 +686,11 @@ const Roles = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsAddSheetOpen(false)}>
                   Cancel
                 </Button>
+                {can(PERMISSIONS.ROLE_CREATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleCreateRole}>
                   Create Role
                 </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -741,9 +773,11 @@ const Roles = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsEditSheetOpen(false)}>
                   Cancel
                 </Button>
+                {can(PERMISSIONS.ROLE_UPDATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleSaveRole}>
                   Save Changes
                 </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -840,6 +874,7 @@ const Roles = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsViewSheetOpen(false)}>
                   Close
                 </Button>
+                {can(PERMISSIONS.ROLE_UPDATE) && (
                 <Button
                   className="flex-1 bg-gradient-primary"
                   onClick={() => {
@@ -849,6 +884,7 @@ const Roles = () => {
                 >
                   Edit Role
                 </Button>
+                  )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -866,9 +902,11 @@ const Roles = () => {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
+            {can(PERMISSIONS.ROLE_DELETE) && (
             <Button variant="destructive" onClick={confirmDeleteRole}>
               Delete
             </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

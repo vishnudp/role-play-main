@@ -21,8 +21,10 @@ import { Shield, FileText, Plus, MoreHorizontal, Edit, Pencil, Trash2, Search, C
 import { cn } from "@/lib/utils";
 import { fetchAvatarConfigurations, fetchCertificate, fetchOrganizations, fetchRolePlays } from "../api/apiService";
 import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, createCertificate, updateCertificateApi, deleteCertificate } from "../api/apiService";
-import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import { API_BASE_URL } from '../config/apiConfig';
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 interface Certification {
   id: string;
   name: string;
@@ -481,6 +483,7 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
 };
 
 const Certifications = () => {
+   const { can } = usePermission();
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
@@ -501,8 +504,8 @@ const Certifications = () => {
           .then((certs) => setCertifications(Array.isArray(certs) ? certs : []))
           .catch(() => setCertifications([]));
         await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
         await fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
@@ -727,6 +730,7 @@ const Certifications = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Certifications</h1>
             <p className="text-muted-foreground mt-2">Manage certifications and their requirements</p>
           </div>
+          {can(PERMISSIONS.CERTIFICATION_CREATE) && (
           <Button
             onClick={() => { resetForm(); setIsCreateSheetOpen(true); }}
             className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
@@ -734,6 +738,7 @@ const Certifications = () => {
             <Plus className="h-4 w-4 mr-2" />
             Add Certifications
           </Button>
+          )}
         </div>
 
         {/* Search */}
@@ -768,7 +773,16 @@ const Certifications = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {certifications.map((cert) => (
+                  {
+                  certifications.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                                    <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                                    <p>No certification found</p>
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                  certifications.map((cert) => (
                     <TableRow key={cert.id} className="border-border/50 hover:bg-muted/30">
                       <TableCell className="font-medium">{cert.name}</TableCell>
                       <TableCell>
@@ -790,18 +804,22 @@ const Certifications = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
+                          {can(PERMISSIONS.CERTIFICATION_UPDATE) && (
                           <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditClick(cert)}>
                             <Edit className="h-3.5 w-3.5 mr-1.5" />
                             Edit
                           </Button>
+                          )}
+                          {can(PERMISSIONS.CERTIFICATION_DELETE) && (
                           <Button variant="outline" size="sm" className="h-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(cert)}>
                             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                             Delete
                           </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))}
                 </TableBody>
               </Table>
             }
@@ -827,7 +845,9 @@ const Certifications = () => {
             <SheetFooter className="border-t bg-background p-6 mt-auto">
               <div className="flex gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setIsCreateSheetOpen(false)}>Cancel</Button>
+                {can(PERMISSIONS.CERTIFICATION_CREATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleCreate}>Create Certification</Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -848,7 +868,9 @@ const Certifications = () => {
             <SheetFooter className="border-t bg-background p-6 mt-auto">
               <div className="flex gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setIsEditSheetOpen(false)}>Cancel</Button>
+                {can(PERMISSIONS.CERTIFICATION_UPDATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleUpdate}>Update Certification</Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -865,9 +887,11 @@ const Certifications = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
+                {can(PERMISSIONS.CERTIFICATION_DELETE) && (
               <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 Delete
               </AlertDialogAction>
+                )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

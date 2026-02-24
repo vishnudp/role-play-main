@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Edit, Trash2, FileText, X } from "lucide-react";
+import { Search, Plus, Edit, Trash2, FileText, X, Shield } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { fetchDocuments, fetchOrganizations, uploadDocument, deleteDocument, fetchUsers, fetchPreCallPlans, fetchAvatars, fetchGuardrails, fetchCategories, fetchRolePlays, addRoleplay, editRoleplay, deleteRoleplay } from "../api/apiService";
-import { getOrganizationName, getAvatarName, getCategoryName, getSubCategoryName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload } from "../lib/lookupUtils";
+import { getOrganizationName, getAvatarName, getCategoryName, getSubCategoryName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import { add } from "date-fns";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 
 interface Document {
   id: number;
@@ -308,6 +310,7 @@ const RolePlaysForm = ({
 
 
 const RolePlays = () => {
+  const { can } = usePermission();
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedRolePlay, setSelectedRolePlay] = useState<RolePlay | null>(null);
@@ -374,7 +377,7 @@ const RolePlays = () => {
         await loadRolePlays();
 
         const orgs = await fetchOrganizations();
-        setOrganizations(Array.isArray(orgs) ? orgs : []);
+        setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization());
 
         const docs = await fetchDocuments();
         setDocuments(Array.isArray(docs) ? docs : []);
@@ -576,6 +579,7 @@ const RolePlays = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Roleplays</h1>
             <p className="text-muted-foreground mt-2">Manage ECHO-RolePlay configurations</p>
           </div>
+          {can(PERMISSIONS.ROLEPLAY_CREATE) && (
           <Button
             className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
             onClick={() => setIsCreateSheetOpen(true)}
@@ -583,6 +587,7 @@ const RolePlays = () => {
             <Plus className="h-4 w-4 mr-2" />
             Add Roleplay
           </Button>
+            )}
         </div>
 
         {/* Search */}
@@ -620,7 +625,16 @@ const RolePlays = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {roleplays.map((roleplay) => (
+                  {
+                    roleplays.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                                    <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                                    <p>No roleplays found</p>
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                  roleplays.map((roleplay) => (
                     <TableRow key={roleplay.id} className="border-border/50 hover:bg-muted/30">
                       <TableCell>
                         <p className="font-semibold text-foreground">{roleplay.name}</p>
@@ -638,10 +652,13 @@ const RolePlays = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {can(PERMISSIONS.ROLEPLAY_UPDATE) && (
                           <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRolePlay(roleplay)}>
                             <Edit className="h-3.5 w-3.5 mr-1.5" />
                             Edit
                           </Button>
+                            )}
+                            {can(PERMISSIONS.ROLEPLAY_DELETE) && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -651,10 +668,11 @@ const RolePlays = () => {
                             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                             Delete
                           </Button>
+                            )}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))}
                 </TableBody>
               </Table>
             }
@@ -706,9 +724,11 @@ const RolePlays = () => {
               <Button variant="outline" onClick={() => setIsCreateSheetOpen(false)} className="flex-1">
                 Cancel
               </Button>
+              {can(PERMISSIONS.ROLEPLAY_CREATE) && (
               <Button onClick={handleCreateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow">
                 Add Roleplay
               </Button>
+                )}
             </div>
           </SheetFooter>
         </SheetContent>
@@ -758,9 +778,11 @@ const RolePlays = () => {
               <Button variant="outline" onClick={() => setIsEditSheetOpen(false)} className="flex-1">
                 Cancel
               </Button>
+              {can(PERMISSIONS.ROLEPLAY_UPDATE) && (
               <Button onClick={handleUpdateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow">
                 Update Roleplay
               </Button>
+                )}
             </div>
           </SheetFooter>
         </SheetContent>
@@ -777,12 +799,14 @@ const RolePlays = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
+            {can(PERMISSIONS.ROLEPLAY_DELETE) && (
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>
+              )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

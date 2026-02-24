@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, FileText, HelpCircle, Building2, Trash2, Eye, Lightbulb, ListChecks } from "lucide-react";
+import { Plus, Search, Edit, FileText, HelpCircle, Building2, Trash2, Eye, Lightbulb, ListChecks, Shield } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
@@ -22,8 +22,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { fetchOrganizations, fetchPreCallPlans, addPreCallPlans, editPreCallPlans, deletePreCallPlans, addPreCallPlansQuestions, editPreCallPlansQuestions, deletePreCallPlansQuestions } from "@/api/apiService";
-import { getOrganizationName, formatToLongDate } from "@/lib/lookupUtils";
+import { getOrganizationName, formatToLongDate, getLoginUserOrganization } from "@/lib/lookupUtils";
 import { toast } from "sonner";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
 
 interface Question {
   id: number;
@@ -53,6 +55,7 @@ const questionTypes = [
 ];
 
 const PrecallPlans = () => {
+  const { can } = usePermission();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
@@ -101,8 +104,8 @@ const PrecallPlans = () => {
 
       try {
         await fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-          .catch(() => setOrganizations([]));
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
 
         await fetchPreCallPlans()
           .then((res) => {
@@ -342,6 +345,7 @@ const PrecallPlans = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Pre-Call Plan Builder</h1>
             <p className="text-muted-foreground mt-2">Create and manage pre-call plans with structured questions</p>
           </div>
+          {can(PERMISSIONS.PRE_CALL_PLAN_CREATE) && (
           <Button
             onClick={handleOpenAddSheet}
             className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
@@ -349,6 +353,7 @@ const PrecallPlans = () => {
             <Plus className="h-4 w-4 mr-2" />
             Create Plan
           </Button>
+          )}
         </div>
 
         {/* Search & Filters */}
@@ -403,7 +408,16 @@ const PrecallPlans = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPlans.map((plan: any) => (
+                  {
+                  filteredPlans.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No Pre Call Plan found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                  filteredPlans.map((plan: any) => (
                     <TableRow key={plan.id} className="border-border/50 hover:bg-muted/30">
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -425,19 +439,26 @@ const PrecallPlans = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end flex-wrap">
+                          {can(PERMISSIONS.PRE_CALL_PLAN_READ) && (
                           <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewPlan(plan)}>
                             <Eye className="h-3.5 w-3.5 mr-1.5" />
                             View
                           </Button>
+                          )}
+                          {can(PERMISSIONS.PRE_CALL_PLAN_READ) && (
                           <Button variant="outline" size="sm" className="h-8" onClick={() => handleManageQuestions(plan)}>
                             <ListChecks className="h-3.5 w-3.5 mr-1.5" />
                             Questions
                           </Button>
+                          )}
+                          {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
                           <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditPlan(plan)}>
                             <Edit className="h-3.5 w-3.5 mr-1.5" />
                             Edit
                           </Button>
-                          {isSuperAdmin && (
+                          )}
+                          
+                          {isSuperAdmin && can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -451,7 +472,7 @@ const PrecallPlans = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))}
                 </TableBody>
               </Table>
             }
@@ -516,9 +537,11 @@ const PrecallPlans = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsAddSheetOpen(false)}>
                   Cancel
                 </Button>
+                {can(PERMISSIONS.PRE_CALL_PLAN_CREATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={() => handleCreatePlan()}>
                   Create Plan
                 </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -583,9 +606,11 @@ const PrecallPlans = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsEditSheetOpen(false)}>
                   Cancel
                 </Button>
+                {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleSaveEdit}>
                   Save Changes
                 </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -636,6 +661,7 @@ const PrecallPlans = () => {
                                   )}
                                 </div>
                               </div>
+                              {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -644,6 +670,8 @@ const PrecallPlans = () => {
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
+                              )}
+                              {can(PERMISSIONS.PRE_CALL_PLAN_DELETE) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -652,6 +680,7 @@ const PrecallPlans = () => {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -711,6 +740,7 @@ const PrecallPlans = () => {
                           />
                         </div>
                       </div>
+                      {can(PERMISSIONS.PRE_CALL_PLAN_CREATE) && (
                       <Button
                         variant="outline"
                         className="w-full"
@@ -720,6 +750,7 @@ const PrecallPlans = () => {
                         <Plus className="h-4 w-4 mr-2" />
                         Add Question
                       </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -731,9 +762,11 @@ const PrecallPlans = () => {
                 <Button variant="outline" className="flex-1" onClick={() => setIsQuestionsSheetOpen(false)}>
                   Cancel
                 </Button>
+                {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
                 <Button className="flex-1 bg-gradient-primary" onClick={handleSaveQuestions}>
                   Save Questions
                 </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -800,9 +833,10 @@ const PrecallPlans = () => {
                 </Button>
 
                 {/* <-- THIS IS WHERE YOUR BUTTON HANDLER GOES --> */}
-                <Button
-                  onClick={async () => {
-                    if (!selectedPlan || !editingQuestion) return;
+                {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
+                  <Button
+                    onClick={async () => {
+                      if (!selectedPlan || !editingQuestion) return;
 
                     const payload = {
                       question_number: questions.findIndex(q => q.id === editingQuestion.id) + 1,
@@ -834,6 +868,7 @@ const PrecallPlans = () => {
                 >
                   Save
                 </Button>
+                )}
               </SheetFooter>
             </SheetContent>
           </Sheet>
@@ -841,11 +876,12 @@ const PrecallPlans = () => {
 
 
         {/* Delete Question Confirmation Dialog */}
-        <AlertDialog
-          open={isDeleteQuestionDialogOpen}
-          onOpenChange={setIsDeleteQuestionDialogOpen}
-        >
-          <AlertDialogContent>
+        {can(PERMISSIONS.PRE_CALL_PLAN_DELETE) && (
+          <AlertDialog
+            open={isDeleteQuestionDialogOpen}
+            onOpenChange={setIsDeleteQuestionDialogOpen}
+          >
+            <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Question</AlertDialogTitle>
               <AlertDialogDescription>
@@ -875,7 +911,7 @@ const PrecallPlans = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
+        )}
 
 
         {/* View Plan Sheet */}

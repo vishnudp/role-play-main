@@ -9,13 +9,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Bot, FileText, Target, Globe, Settings, Eye, Trash2, Search, User, Palette, Brain, Building2 } from "lucide-react";
+import { Plus, Bot, FileText, Target, Globe, Settings, Eye, Trash2, Search, User, Palette, Brain, Building2, Shield } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { fetchAvatars, fetchMetaData, fetchOrganizations, fetchAvatarConfigurations, addAvatar, editAvatar, deleteAvatar } from "../api/apiService";
-import { getOrganizationName } from "@/lib/lookupUtils";
+import { getLoginUserOrganization, getOrganizationName } from "@/lib/lookupUtils";
 import { API_BASE_URL } from '../config/apiConfig';
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from '@/hooks/usePermission';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface AvatarFormContentProps {
   isEdit?: boolean;
@@ -276,6 +286,7 @@ const AvatarFormContent = ({
 );
 
 const Avatars = () => {
+  const { can } = usePermission();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrg, setSelectedOrg] = useState("all");
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -349,8 +360,8 @@ const Avatars = () => {
   const loadAvatars = async () => {
     try {
       await fetchOrganizations()
-        .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : []))
-        .catch(() => setOrganizations([]));
+        .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+        .catch(() => setOrganizations(getLoginUserOrganization()));
       const apiData = await fetchAvatars();
 
       // Map API response to AvatarData
@@ -395,22 +406,22 @@ const Avatars = () => {
   // if (loading) return <p>Loading avatars...</p>;
 
   const toggleAvatarSelection = (avatarId: string) => {
-  const currentSelection = formData.selectedAvatarIds || [];
+    const currentSelection = formData.selectedAvatarIds || [];
 
-  // If already selected → deselect (empty array)
-  if (currentSelection.includes(avatarId)) {
-    setFormData({
-      ...formData,
-      selectedAvatarIds: []
-    });
-  } else {
-    // Single select → replace array with one value
-    setFormData({
-      ...formData,
-      selectedAvatarIds: [avatarId]
-    });
-  }
-};
+    // If already selected → deselect (empty array)
+    if (currentSelection.includes(avatarId)) {
+      setFormData({
+        ...formData,
+        selectedAvatarIds: []
+      });
+    } else {
+      // Single select → replace array with one value
+      setFormData({
+        ...formData,
+        selectedAvatarIds: [avatarId]
+      });
+    }
+  };
 
   const filteredAvatars = avatars.filter(avatar => {
     const matchesSearch =
@@ -678,13 +689,15 @@ const Avatars = () => {
             <h1 className="text-4xl font-bold text-foreground tracking-tight">Avatar Builder</h1>
             <p className="text-muted-foreground mt-2">Create AI-powered roleplay avatars with customizable personalities and behaviors</p>
           </div>
-          <Button
-            onClick={() => { setFormData({ selectedAvatarIds: [] }); setIsCreateSheetOpen(true); }}
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create New Avatar
-          </Button>
+          {can(PERMISSIONS.AVATAR_CREATE) && (
+            <Button
+              onClick={() => { setFormData({ selectedAvatarIds: [] }); setIsCreateSheetOpen(true); }}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Avatar
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -721,92 +734,107 @@ const Avatars = () => {
           </div>
         ) :
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredAvatars.map((avatar) => (
-              <Card key={avatar.id} className="border-border/50 hover:border-primary/30 hover:shadow-xl transition-all duration-300 group overflow-hidden">
-                <div className={`h-2 bg-gradient-to-r ${avatar.color}`}></div>
+            {filteredAvatars.length === 0 ? (
+              <Card className="border-border/50 hover:border-primary/30 hover:shadow-xl transition-all duration-300 group overflow-hidden">
+                <div className="text-center py-12 text-muted-foreground">
+                  <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>No avatars found</p>
+                </div>
+              </Card>
+            ) : (
+              filteredAvatars.map((avatar) => (
+                <Card key={avatar.id} className="border-border/50 hover:border-primary/30 hover:shadow-xl transition-all duration-300 group overflow-hidden">
+                  <div className={`h-2 bg-gradient-to-r ${avatar.color}`}></div>
 
-                <CardHeader className="pb-4">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-16 w-16 border-2 border-border/50">
-                      <AvatarFallback className={`bg-gradient-to-br ${avatar.color} text-white text-xl font-bold`}>
-                        <Bot className="h-8 w-8" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-xl group-hover:text-primary transition-colors">{avatar.name}</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-1">{getOrganizationName(organizations, avatar.organization)}</p>
-                          <Badge variant={avatar.status === "Active" ? "default" : "secondary"} className="mt-2">
-                            {avatar.status}
-                          </Badge>
-                        </div>
-                        {/* <div className="text-right">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start gap-4">
+                      <Avatar className="h-16 w-16 border-2 border-border/50">
+                        <AvatarFallback className={`bg-gradient-to-br ${avatar.color} text-white text-xl font-bold`}>
+                          <Bot className="h-8 w-8" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-xl group-hover:text-primary transition-colors">{avatar.name}</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-1">{getOrganizationName(organizations, avatar.organization)}</p>
+                            <Badge variant={avatar.status === "Active" ? "default" : "secondary"} className="mt-2">
+                              {avatar.status}
+                            </Badge>
+                          </div>
+                          {/* <div className="text-right">
                         <p className="text-3xl font-bold text-foreground">{avatar.uses}</p>
                         <p className="text-xs text-muted-foreground font-medium">Total Uses</p>
                       </div> */}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
 
-                <CardContent className="space-y-5">
-                  {/* Description */}
-                  <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
-                    <p className="text-sm text-foreground">{avatar.description}</p>
-                  </div>
-
-                  {/* Selected Avatars & Background */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <User className="h-3.5 w-3.5 text-primary" />
-                        <p className="text-xs text-muted-foreground font-medium">Avatars</p>
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">{avatar.selectedAvatarIds.length} selected</p>
+                  <CardContent className="space-y-5">
+                    {/* Description */}
+                    <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
+                      <p className="text-sm text-foreground">{avatar.description}</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Globe className="h-3.5 w-3.5 text-accent" />
-                        <p className="text-xs text-muted-foreground font-medium">Background</p>
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">{avatar.background}</p>
-                    </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2 border-t border-border/30">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditSheet(avatar)}
-                      className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
-                    >
-                      <Settings className="h-3.5 w-3.5 mr-2" />
-                      Configure
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openViewSheet(avatar)}
-                      className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
-                    >
-                      <Eye className="h-3.5 w-3.5 mr-2" />
-                      View Details
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openDeleteDialog(avatar)}
-                      className="h-9 text-sm border-destructive/50 text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    {/* Selected Avatars & Background */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <User className="h-3.5 w-3.5 text-primary" />
+                          <p className="text-xs text-muted-foreground font-medium">Avatars</p>
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">{avatar.selectedAvatarIds.length} selected</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Globe className="h-3.5 w-3.5 text-accent" />
+                          <p className="text-xs text-muted-foreground font-medium">Background</p>
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">{avatar.background}</p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2 border-t border-border/30">
+                      {can(PERMISSIONS.AVATAR_UPDATE) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditSheet(avatar)}
+                          className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                        >
+                          <Settings className="h-3.5 w-3.5 mr-2" />
+                          Configure
+                        </Button>
+                      )}
+                      {can(PERMISSIONS.AVATAR_READ) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openViewSheet(avatar)}
+                          className="flex-1 h-9 text-sm border-border/50 hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-2" />
+                          View Details
+                        </Button>
+                      )}
+                      {can(PERMISSIONS.AVATAR_DELETE) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDeleteDialog(avatar)}
+                          className="h-9 text-sm border-destructive/50 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )))
+            }
           </div>
         }
       </div>
@@ -831,7 +859,9 @@ const Avatars = () => {
           />
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsCreateSheetOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateAvatar}>Create Avatar</Button>
+            {can(PERMISSIONS.AVATAR_CREATE) && (
+              <Button onClick={handleCreateAvatar}>Create Avatar</Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -857,7 +887,9 @@ const Avatars = () => {
           />
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditAvatar}>Save Changes</Button>
+            {can(PERMISSIONS.AVATAR_UPDATE) && (
+              <Button onClick={handleEditAvatar}>Save Changes</Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -872,7 +904,9 @@ const Avatars = () => {
           {selectedAvatar && <AvatarViewContent avatar={selectedAvatar} />}
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsViewSheetOpen(false)}>Close</Button>
-            <Button onClick={() => { setIsViewSheetOpen(false); openEditSheet(selectedAvatar!); }}>Edit Avatar</Button>
+            {can(PERMISSIONS.AVATAR_UPDATE) && (
+              <Button onClick={() => { setIsViewSheetOpen(false); openEditSheet(selectedAvatar!); }}>Edit Avatar</Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>

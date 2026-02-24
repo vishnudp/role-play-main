@@ -1,8 +1,11 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Users, Building2, Bot, Calendar, CalendarCheck, FileText, UserCheck } from "lucide-react";
+import { PERMISSIONS } from '@/constants/permissions';
+import { usePermission } from "@/hooks/usePermission";
 
 const Dashboard = () => {
+  const { can } = usePermission();
   const stats = [
     { title: "Total Organisations", value: "24", icon: Building2 },
     { title: "Total Users", value: "1,456", icon: Users },
