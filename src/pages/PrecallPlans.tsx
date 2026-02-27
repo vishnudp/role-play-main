@@ -83,6 +83,9 @@ const PrecallPlans = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingQuestions, setIsSavingQuestions] = useState(false);
+  const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
+  const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
   const [newQuestion, setNewQuestion] = useState<Omit<Question, "id">>({
     question: "",
     answer: "",
@@ -107,7 +110,7 @@ const PrecallPlans = () => {
       setLoading(true);
 
       try {
-         fetchOrganizations()
+        fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
 
@@ -132,6 +135,7 @@ const PrecallPlans = () => {
 
     if (!addPlanName || !addOrgId) return;
     try {
+      setIsAdding(true);
       await addPreCallPlans({
         name: addPlanName,
         organization_id: addOrgId,
@@ -151,6 +155,8 @@ const PrecallPlans = () => {
       // await loadPlans(); // refetch from API
     } catch (error) {
       toast.error(error?.message || "Failed to create plan.");
+    } finally {
+      setIsAdding(false);  // ✅ stop loader
     }
   };
 
@@ -182,6 +188,7 @@ const PrecallPlans = () => {
     if (!selectedPlan || !editPlanName || !editOrgId) return;
 
     try {
+      setIsUpdating(true);
       await editPreCallPlans(selectedPlan.id, {
         name: editPlanName,
         organization_id: editOrgId, // your API probably expects ID
@@ -205,6 +212,8 @@ const PrecallPlans = () => {
       setSelectedPlan(null);
     } catch (error) {
       toast.error(error?.message || "Failed to update plan.");
+    } finally {
+      setIsUpdating(false);  // ✅
     }
   };
 
@@ -218,7 +227,7 @@ const PrecallPlans = () => {
   const handleManageQuestions = (plan: PrecallPlan) => {
     setSelectedPlan(plan);
     setQuestions([...plan.questions]);
-    setNewQuestion({ question: "", answer: "", hint: "", question_type: "Open-ended" });
+    setNewQuestion({ question: "", answer: "", hint: "", question_type: "Open_ended" });
     setIsQuestionsSheetOpen(true);
   };
 
@@ -227,9 +236,23 @@ const PrecallPlans = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (selectedPlan) {
-      setPlans(plans.filter(p => p.id !== selectedPlan.id));
+  const confirmDelete = async () => {
+    if (!selectedPlan) return;
+
+    try {
+      setIsDeleting(true);
+
+      await deletePreCallPlans(selectedPlan.id);
+
+      const res = await fetchPreCallPlans();
+      setPlans(Array.isArray(res) ? res : []);
+
+      toast.success("Deleted successfully!");
+
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete plan.");
+    } finally {
+      setIsDeleting(false);
       setIsDeleteDialogOpen(false);
       setSelectedPlan(null);
     }
@@ -247,10 +270,42 @@ const PrecallPlans = () => {
     setQuestions([...questions, localQuestion]);
 
     // Reset form
-    setNewQuestion({ question: "", answer: "", hint: "", question_type: "Open-ended" });
+    setNewQuestion({ question: "", answer: "", hint: "", question_type: "Open_ended" });
   };
 
 
+  const handleEditQuestion = async () => {
+    if (!selectedPlan || !editingQuestion) return;
+
+    try {
+      setIsUpdatingQuestion(true);
+
+      const payload = {
+        question: editingQuestion.question,
+        answer: editingQuestion.answer,
+        hint: editingQuestion.hint,
+        question_type: editingQuestion.question_type,
+      };
+
+      await editPreCallPlansQuestions(
+        payload,
+        selectedPlan.id,
+        editingQuestion.id
+      );
+
+      toast.success("Question updated successfully!");
+
+      const res = await fetchPreCallPlans();
+      setQuestions(Array.isArray(res) ? res : []);
+
+      setEditingQuestion(null);
+
+    } catch (error) {
+      toast.error(error?.message || "Failed to update question.");
+    } finally {
+      setIsUpdatingQuestion(false);
+    }
+  };
 
 
 
@@ -299,6 +354,7 @@ const PrecallPlans = () => {
     if (!selectedPlan) return;
 
     try {
+      setIsSavingQuestions(true);
       // Loop through all questions and call API
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
@@ -313,7 +369,7 @@ const PrecallPlans = () => {
 
         // Decide whether to add or edit based on ID (temporary IDs are > 1e12)
         if (q.id < 1_000_000_000_000) {
-          await editPreCallPlansQuestions(payload, selectedPlan.id, q.id);
+          await editPreCallPlansQuestions(payload, selectedPlan.id, editingQuestion.id);
         } else {
           await addPreCallPlansQuestions(payload, selectedPlan.id);
         }
@@ -328,6 +384,8 @@ const PrecallPlans = () => {
       toast.success("All questions saved successfully!");
     } catch (error) {
       toast.error(error?.message || "Failed to save questions.");
+    } finally {
+      setIsSavingQuestions(false);
     }
   };
 
@@ -339,9 +397,11 @@ const PrecallPlans = () => {
   const filteredPlans = plans.filter((plan) => {
     const orgName = getOrganizationName(organizations, plan.organization_id);
 
+    if (!searchQuery && orgFilter === "all") return true;
+
     const matchesSearch =
-      plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      orgName.toLowerCase().includes(searchQuery.toLowerCase());
+      plan?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      orgName?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesOrg = orgFilter === "all" || orgName === orgFilter;
 
@@ -551,8 +611,13 @@ const PrecallPlans = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.PRE_CALL_PLAN_CREATE) && (
-                  <Button className="flex-1 bg-gradient-primary" onClick={() => handleCreatePlan()}>
-                    Create Plan
+                  <Button
+                    className="flex-1 bg-gradient-primary"
+                    onClick={handleCreatePlan}
+                    disabled={isAdding}
+                  >
+                    {isAdding && <ButtonLoader />}
+                    {isAdding ? "Creating..." : "Create Plan"}
                   </Button>
                 )}
               </div>
@@ -620,8 +685,13 @@ const PrecallPlans = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
-                  <Button className="flex-1 bg-gradient-primary" onClick={handleSaveEdit}>
-                    Save Changes
+                  <Button
+                    className="flex-1 bg-gradient-primary"
+                    onClick={handleSaveEdit}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating && <ButtonLoader />}
+                    {isUpdating ? "Saving..." : "Save Changes"}
                   </Button>
                 )}
               </div>
@@ -776,8 +846,13 @@ const PrecallPlans = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
-                  <Button className="flex-1 bg-gradient-primary" onClick={handleSaveQuestions}>
-                    Save Questions
+                  <Button
+                    className="flex-1 bg-gradient-primary"
+                    onClick={handleSaveQuestions}
+                    disabled={isSavingQuestions}
+                  >
+                    {isSavingQuestions && <ButtonLoader />}
+                    {isSavingQuestions ? "Saving..." : "Save Questions"}
                   </Button>
                 )}
               </div>
@@ -848,38 +923,12 @@ const PrecallPlans = () => {
                 {/* <-- THIS IS WHERE YOUR BUTTON HANDLER GOES --> */}
                 {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
                   <Button
-                    onClick={async () => {
-                      if (!selectedPlan || !editingQuestion) return;
-
-                      const payload = {
-                        question_number: questions.findIndex(q => q.id === editingQuestion.id) + 1,
-                        question: editingQuestion.question,
-                        question_type: editingQuestion.question_type.replace(/\s/g, "_"),
-                        answer: editingQuestion.answer,
-                        hint: editingQuestion.hint || "",
-                      };
-
-                      try {
-                        // Call API only if question exists in backend
-                        if (!editingQuestion.isNew) {
-                          await editPreCallPlans(selectedPlan.id, payload);
-                        }
-
-                        // Update local state regardless
-                        setQuestions(
-                          questions.map((q) =>
-                            q.id === editingQuestion.id ? { ...editingQuestion, isNew: q.isNew } : q
-                          )
-                        );
-
-                        setEditingQuestion(null);
-                        toast.success("Question updated successfully!");
-                      } catch (error) {
-                        toast.error(error?.message || "Failed to update question.");
-                      }
-                    }}
+                    onClick={handleEditQuestion}
+                    disabled={isUpdatingQuestion}
+                    className="bg-gradient-primary"
                   >
-                    Save
+                    {isUpdatingQuestion && <ButtonLoader />}
+                    {isUpdatingQuestion ? "Updating..." : "Save Changes"}
                   </Button>
                 )}
               </SheetFooter>
@@ -908,6 +957,7 @@ const PrecallPlans = () => {
                   onClick={async () => {
                     if (!selectedPlan || !questionToDelete) return;
                     try {
+                      setIsDeletingQuestion(true);
                       await deletePreCallPlansQuestions(selectedPlan.id, questionToDelete.id);
                       setQuestions(questions.filter((q) => q.id !== questionToDelete.id));
                       setIsDeleteQuestionDialogOpen(false);
@@ -916,10 +966,19 @@ const PrecallPlans = () => {
                       toast.success("Question deleted successfully!");
                     } catch (error) {
                       toast.error(error?.message || "Failed to delete question.");
+                    } finally {
+                      setIsDeletingQuestion(false);
                     }
                   }}
                 >
-                  Delete
+                  {isDeletingQuestion ? (
+                    <>
+                      <ButtonLoader />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete"
+                  )}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1026,9 +1085,11 @@ const PrecallPlans = () => {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDelete}
+                disabled={isDeleting}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Delete
+                {isDeleting && <ButtonLoader />}
+                {isDeleting ? "Deleting..." : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -20,7 +20,7 @@ import {
 import { Shield, FileText, Plus, MoreHorizontal, Edit, Pencil, Trash2, Search, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchAvatarConfigurations, fetchCertificate, fetchOrganizations, fetchRolePlays } from "../api/apiService";
-import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, createCertificate, updateCertificateApi, deleteCertificate } from "../api/apiService";
+import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, createCertificate, updateCertificateApi, deleteCertificate, fetchIcons } from "../api/apiService";
 import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import { API_BASE_URL } from '../config/apiConfig';
 import { PERMISSIONS } from '@/constants/permissions';
@@ -143,7 +143,7 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
     );
 
   const filteredIcons = icons.filter((icon) =>
-    icon.avatar_name.toLowerCase().includes(iconSearchQuery.toLowerCase())
+    icon.name.toLowerCase().includes(iconSearchQuery.toLowerCase())
   );
 
   // const getFilteredRoleplays = () => {
@@ -400,10 +400,10 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                           className="mr-1 mb-1"
                         >
                           <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
-                            {icon?.photo ? (
+                            {icon?.url ? (
                               <img
-                                src={`${API_BASE_URL}/${icon.photo}`}
-                                alt={icon?.avatar_name}
+                                src={`${API_BASE_URL}/${icon.url}`}
+                                alt={icon?.name}
                                 className="w-full h-full object-cover"
                                 crossOrigin="anonymous"
                                 onError={(e) => {
@@ -412,10 +412,10 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                               />
                             ) : (
                               <span className="text-[10px] text-gray-500 font-medium leading-none">
-                                {icon?.avatar_name?.charAt(0)?.toUpperCase()}
+                                {icon?.name?.charAt(0)?.toUpperCase()}
                               </span>
                             )}
-                          </div>{icon?.avatar_name}
+                          </div>{icon?.name}
                           <button
                             className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                             onMouseDown={(e) => e.preventDefault()}
@@ -462,10 +462,10 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                     {/* ✅ Image + Name in single row */}
                     <div className="flex items-center gap-2 text-sm">
                       <div className="w-6 h-6 min-w-[24px] min-h-[24px] max-w-[24px] max-h-[24px] rounded-full shrink-0 overflow-hidden bg-gray-200 flex items-center justify-center">
-                        {icon?.photo ? (
+                        {icon?.url ? (
                           <img
-                            src={`${API_BASE_URL}/${icon.photo}`}
-                            alt={icon?.avatar_name}
+                            src={`${API_BASE_URL}/${icon.url}`}
+                            alt={icon?.name}
                             className="w-full h-full object-cover"
                             crossOrigin="anonymous"
                             onError={(e) => {
@@ -474,12 +474,12 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                           />
                         ) : (
                           <span className="text-[10px] text-gray-500 font-medium leading-none">
-                            {icon?.avatar_name?.charAt(0)?.toUpperCase()}
+                            {icon?.name?.charAt(0)?.toUpperCase()}
                           </span>
                         )}
                       </div>
                       <span className="whitespace-nowrap">
-                        {icon.avatar_name}
+                        {icon.name}
                       </span>
                     </div>
                   </div>
@@ -532,7 +532,7 @@ const Certifications = () => {
          fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
-         fetchAvatarConfigurations()
+         fetchIcons()
           .then((icons) => setIcons(Array.isArray(icons) ? icons : []))
           .catch(() => setIcons([]));
       } finally {
@@ -648,7 +648,10 @@ const Certifications = () => {
       const res = await createCertificate(payload); // <-- your API
       toast.success("Certification created");
 
-      setCertifications(prev => [...prev, res.data]);
+      // setCertifications(prev => [...prev, res.data]);
+      await fetchCertificate()
+          .then((certs) => setCertifications(Array.isArray(certs) ? certs : []))
+          .catch(() => setCertifications([]));
 
       setIsCreateSheetOpen(false);
       resetForm();
@@ -705,10 +708,12 @@ const Certifications = () => {
       setIsUpdating(true);
       const res = await updateCertificateApi(selectedCertification.id, payload);
 
-      setCertifications(prev =>
-        prev.map(c => c.id === selectedCertification.id ? res.data : c)
-      );
-
+      // setCertifications(prev =>
+      //   prev.map(c => c.id === selectedCertification.id ? res.data : c)
+      // );
+      await fetchCertificate()
+          .then((certs) => setCertifications(Array.isArray(certs) ? certs : []))
+          .catch(() => setCertifications([]));
       toast.success("Certification updated");
       setIsEditSheetOpen(false);
       resetForm();
@@ -729,9 +734,12 @@ const Certifications = () => {
       setIsDeleting(true);
       await deleteCertificate(certToDelete.id);
 
-      setCertifications(prev =>
-        prev.filter(c => c.id !== certToDelete.id)
-      );
+      // setCertifications(prev =>
+      //   prev.filter(c => c.id !== certToDelete.id)
+      // );
+      await fetchCertificate()
+          .then((certs) => setCertifications(Array.isArray(certs) ? certs : []))
+          .catch(() => setCertifications([]));
 
       toast.success("Deleted successfully");
     } catch (error) {
@@ -807,24 +815,24 @@ const Certifications = () => {
                       </TableRow>
                     ) : (
                       certifications.map((cert) => (
-                        <TableRow key={cert.id} className="border-border/50 hover:bg-muted/30">
-                          <TableCell className="font-medium">{cert.name}</TableCell>
+                        <TableRow key={cert?.id} className="border-border/50 hover:bg-muted/30">
+                          <TableCell className="font-medium">{cert?.name}</TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {cert.organizations.map((org, i) => (
+                              {cert?.organizations?.map((org, i) => (
                                 <Badge key={i} variant="secondary" className="text-xs">{org?.organization?.name}</Badge>
                               ))}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {cert.rolePlays.map((rp, i) => (
+                              {cert?.rolePlays?.map((rp, i) => (
                                 <Badge key={i} variant="secondary" className="text-xs">{rp?.rolePlay?.name}</Badge>
                               ))}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{cert.min_score}/10</Badge>
+                            <Badge variant="outline">{cert?.min_score}/10</Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-2 justify-end">

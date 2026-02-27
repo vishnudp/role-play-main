@@ -283,7 +283,7 @@ export async function editPreCallPlans(id: any, payload: any) {
 }
 
 // Delete a  Pre Call Plans
-export async function deletePreCallPlans(id: string) {
+export async function deletePreCallPlans(id: any) {
   try {
     const res = await apiClient.delete(`/api/pre-call-plans/${id}`);
     return res.data.data; // can return some confirmation or the deleted object
@@ -673,6 +673,16 @@ export async function deleteCertificate(certificateId: any) {
     handleApiError(error);
   }
 }
+
+export async function fetchIcons() {
+  try {
+    const res = await apiClient.get('/api/icons');
+    return res.data.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 
 
 
