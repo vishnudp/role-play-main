@@ -443,8 +443,8 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
                 <Input
                   placeholder="Search icons..."
                   className="pl-10 h-9"
-                  value={rolePlaySearchQuery}
-                  onChange={(e) => setRolePlaySearchQuery(e.target.value)}
+                  value={iconSearchQuery}
+                  onChange={(e) => setIconSearchQuery(e.target.value)}
                 />
               </div>
               <div className="max-h-[200px] overflow-y-auto space-y-1">
