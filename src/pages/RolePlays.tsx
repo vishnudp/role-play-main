@@ -26,6 +26,7 @@ import { getOrganizationName, getAvatarName, getCategoryName, getSubCategoryName
 import { add } from "date-fns";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 
 interface Document {
   id: number;
@@ -333,6 +334,11 @@ const RolePlays = () => {
   const [guardrails, setGuardrails] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [roleplayName, setRoleplayName] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Mock documents data
   // const documents: Document[] = [
@@ -438,8 +444,18 @@ const RolePlays = () => {
     }
   };
 
+  const filteredRoleplays = roleplays.filter((roleplay) => {
+    const orgName = getOrganizationName(organizations, roleplay.organization_id) || "";
+
+    return (
+      roleplay.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      orgName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
   const handleCreateRolePlay = async () => {
     try {
+      setIsAdding(true);
       const payload = {
         name: roleplayName, // ideally bind name to state
         organization_id: selectedOrganization,
@@ -474,7 +490,9 @@ const RolePlays = () => {
 
 
     } catch (error) {
-      toast.error("Failed to create roleplay");
+      toast.error(error?.message || "Failed to create roleplay");
+    } finally {
+      setIsAdding(false);
     }
 
   };
@@ -504,6 +522,7 @@ const RolePlays = () => {
         console.log("No roleplay selected");
         return;
       }
+      setIsUpdating(true);
 
       const payload = {
         name: roleplayName,
@@ -535,7 +554,9 @@ const RolePlays = () => {
       await loadRolePlays();
     } catch (error) {
       console.error("Update error:", error);
-      toast.error("Failed to update roleplay");
+      toast.error(error?.message || "Failed to update roleplay");
+    } finally {
+      setIsUpdating(false);
     }
 
   };
@@ -550,6 +571,7 @@ const RolePlays = () => {
       setRolePlay(roleplays.filter((s) => s.id !== sessionToDelete.id));
 
       try {
+        setIsDeleting(true);
         await deleteRoleplay(sessionToDelete.id);
         toast.success("Roleplay deleted successfully");
 
@@ -558,8 +580,9 @@ const RolePlays = () => {
 
       } catch (error) {
         console.error("Delete error:", error);
-        toast.error("Failed to delete roleplay");
+        toast.error(error?.message || "Failed to delete roleplay");
       } finally {
+        setIsDeleting(false);
         setIsDeleteDialogOpen(false);
         setSessionToDelete(null);
       }
@@ -580,14 +603,14 @@ const RolePlays = () => {
             <p className="text-muted-foreground mt-2">Manage ECHO-RolePlay configurations</p>
           </div>
           {can(PERMISSIONS.ROLEPLAY_CREATE) && (
-          <Button
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-            onClick={() => setIsCreateSheetOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Roleplay
-          </Button>
-            )}
+            <Button
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+              onClick={() => setIsCreateSheetOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Roleplay
+            </Button>
+          )}
         </div>
 
         {/* Search */}
@@ -597,6 +620,8 @@ const RolePlays = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search roleplays by name or organization..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 h-11 bg-background border-border/50 focus:border-primary transition-colors"
               />
             </div>
@@ -626,53 +651,53 @@ const RolePlays = () => {
                 </TableHeader>
                 <TableBody>
                   {
-                    roleplays.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                                    <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                                    <p>No roleplays found</p>
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                  roleplays.map((roleplay) => (
-                    <TableRow key={roleplay.id} className="border-border/50 hover:bg-muted/30">
-                      <TableCell>
-                        <p className="font-semibold text-foreground">{roleplay.name}</p>
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-foreground">{getOrganizationName(organizations, roleplay.organization_id)}</p>
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-foreground">
-                          {getCategoryName(categories, roleplay.category_id)} / {getSubCategoryName(categories, roleplay.category_id, roleplay.subcategory_id)}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-foreground">{getAvatarName(avatars, roleplay.avatar_id)}</p>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {can(PERMISSIONS.ROLEPLAY_UPDATE) && (
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRolePlay(roleplay)}>
-                            <Edit className="h-3.5 w-3.5 mr-1.5" />
-                            Edit
-                          </Button>
-                            )}
-                            {can(PERMISSIONS.ROLEPLAY_DELETE) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDeleteClick(roleplay)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                            Delete
-                          </Button>
-                            )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )))}
+                    filteredRoleplays.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No roleplays found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredRoleplays.map((roleplay) => (
+                        <TableRow key={roleplay.id} className="border-border/50 hover:bg-muted/30">
+                          <TableCell>
+                            <p className="font-semibold text-foreground">{roleplay.name}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-foreground">{getOrganizationName(organizations, roleplay.organization_id)}</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-foreground">
+                              {getCategoryName(categories, roleplay.category_id)} / {getSubCategoryName(categories, roleplay.category_id, roleplay.subcategory_id)}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-foreground">{getAvatarName(avatars, roleplay.avatar_id)}</p>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {can(PERMISSIONS.ROLEPLAY_UPDATE) && (
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRolePlay(roleplay)}>
+                                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                  Edit
+                                </Button>
+                              )}
+                              {can(PERMISSIONS.ROLEPLAY_DELETE) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteClick(roleplay)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )))}
                 </TableBody>
               </Table>
             }
@@ -725,10 +750,11 @@ const RolePlays = () => {
                 Cancel
               </Button>
               {can(PERMISSIONS.ROLEPLAY_CREATE) && (
-              <Button onClick={handleCreateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow">
-                Add Roleplay
-              </Button>
-                )}
+                <Button onClick={handleCreateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow" disabled={isAdding}>
+                  {isAdding && <ButtonLoader />}
+                  {isAdding ? "Adding..." : "Add Roleplay"}
+                </Button>
+              )}
             </div>
           </SheetFooter>
         </SheetContent>
@@ -779,10 +805,11 @@ const RolePlays = () => {
                 Cancel
               </Button>
               {can(PERMISSIONS.ROLEPLAY_UPDATE) && (
-              <Button onClick={handleUpdateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow">
-                Update Roleplay
-              </Button>
-                )}
+                <Button onClick={handleUpdateRolePlay} className="flex-1 bg-gradient-primary hover:shadow-glow" disabled={isUpdating}>
+                  {isUpdating && <ButtonLoader />}
+                  {isUpdating ? "Updating..." : "Update Roleplay"}
+                </Button>
+              )}
             </div>
           </SheetFooter>
         </SheetContent>
@@ -800,13 +827,15 @@ const RolePlays = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             {can(PERMISSIONS.ROLEPLAY_DELETE) && (
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-              )}
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeleting}
+              >
+                {isDeleting && <ButtonLoader />}
+                {isDeleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

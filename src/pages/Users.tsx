@@ -29,6 +29,8 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
 import { TableCell, TableRow } from "@/components/ui/table";
+import ButtonLoader from "@/components/ui/buttonLoader";
+
 interface User {
   id: string;
   name: string;
@@ -70,6 +72,10 @@ const UsersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOrganization, setFilterOrganization] = useState("");
   const [filterRole, setFilterRole] = useState("");
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   // Form state for add
   const [newUser, setNewUser] = useState({
     name: "",
@@ -98,16 +104,16 @@ const UsersPage = () => {
     async function loadData() {
       setLoading(true);
       try {
-        await fetchOrganizations()
+         fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
-        await fetchDocuments()
+         fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
-        await fetchRoles()
+         fetchRoles()
           .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
           .catch(() => setRoles([]));
-        await fetchRolePlays()
+         fetchRolePlays()
           .then((rolePlays) => setRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
           .catch(() => setRolePlays([]));
         await fetchUsers()
@@ -126,10 +132,16 @@ const UsersPage = () => {
     const searchMatch =
       user.name.toLowerCase().includes(query) ||
       user.email.toLowerCase().includes(query) ||
-      getOrganizationName(organizations, user.parent.id).toLowerCase().includes(query);
+      getOrganizationName(organizations, user?.parent?.id).toLowerCase().includes(query);
 
-    const orgMatch = filterOrganization ? user.organization === filterOrganization : true;
-    const roleMatch = filterRole ? user.role.id === filterRole : true;
+    const orgMatch =
+      filterOrganization && filterOrganization !== "all"
+        ? user.parent?.id === filterOrganization
+        : true;
+    const roleMatch =
+      filterRole && filterRole !== "all"
+        ? user.role.id === filterRole
+        : true;
 
     return searchMatch && orgMatch && roleMatch;
   });
@@ -155,7 +167,7 @@ const UsersPage = () => {
         parent_id: newUser.organization, // assuming org admin id
         is_active: newUser.status === "Active"
       };
-
+      setIsAdding(true);
       const createdUser = await addUser(payload);
 
       setUsers(prev => [...prev, createdUser]);
@@ -174,7 +186,9 @@ const UsersPage = () => {
 
       toast.success("User created successfully");
     } catch (error) {
-      toast.error("Failed to create user");
+      toast.error(error?.message || "Failed to create user");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -200,7 +214,7 @@ const UsersPage = () => {
       if (editUser.password) {
         payload.password = editUser.password;
       }
-
+      setIsUpdating(true);
       const updatedUser = await updateUserAPi(selectedUser.id, payload);
 
       setUsers(prev =>
@@ -212,7 +226,9 @@ const UsersPage = () => {
 
       toast.success("User updated successfully");
     } catch (error) {
-      toast.error("Failed to update user");
+      toast.error(error?.message || "Failed to update user");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -221,6 +237,7 @@ const UsersPage = () => {
     if (!deleteUserId) return;
 
     try {
+      setIsDeleting(true);
       await deleteUserApi(deleteUserId);
 
       setUsers(prev => prev.filter(u => u.id !== deleteUserId));
@@ -228,7 +245,9 @@ const UsersPage = () => {
 
       toast.success("User deleted successfully");
     } catch (error) {
-      toast.error("Failed to delete user");
+      toast.error(error?.message || "Failed to delete user");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -271,14 +290,14 @@ const UsersPage = () => {
               Bulk Upload
             </Button> */}
             {can(PERMISSIONS.USER_CREATE) && (
-            <Button
-              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-              onClick={() => setIsAddSheetOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
-              )}
+              <Button
+                className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+                onClick={() => setIsAddSheetOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            )}
           </div>
         </div>
 
@@ -339,6 +358,7 @@ const UsersPage = () => {
                   <SelectValue placeholder="Filter by Organization" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Organizations</SelectItem>
                   {organizations.map((org) => (
                     <SelectItem key={org.id} value={org.id}>
                       {org.name}
@@ -388,119 +408,121 @@ const UsersPage = () => {
                   </thead>
                   <tbody>
                     {
-                    filteredUsers.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                                    <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                                    <p>No user found</p>
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                    filteredUsers.map((user) => (
-                      <tr key={user.id} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border-2 border-border/50">
-                              {/* <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} /> */}
-                              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                {user.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-semibold text-foreground">{user.name}</p>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Mail className="h-3 w-3" />
-                                {user.email}
+                      filteredUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                            <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                            <p>No user found</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredUsers.map((user) => (
+                          <tr key={user.id} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10 border-2 border-border/50">
+                                  {/* <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} /> */}
+                                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                    {user.name.split(' ').map(n => n[0]).join('')}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-semibold text-foreground">{user.name}</p>
+                                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Mail className="h-3 w-3" />
+                                    {user.email}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1.5 text-sm">
-                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-medium text-foreground">{getOrganizationName(organizations,user?.parent_id)}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge variant="outline" className="font-normal">
-                            {user.role_type === "Super Admin" || user.role_type === "Org Admin" ? "Admin" : "Mobile App"}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <Badge variant={getRoleBadgeVariant(user.role_type)}>
-                            {user.role_type}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <Badge variant={user.is_active ? "default" : "secondary"} className="font-normal">
-                            {user.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-end gap-2">
-                            {can(PERMISSIONS.USER_UPDATE) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-xs hover:bg-primary/10 hover:text-primary"
-                              onClick={() => openEditSheet(user)}
-                            >
-                              Edit
-                            </Button>
-                              )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {/* <DropdownMenuItem>View Profile</DropdownMenuItem>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-1.5 text-sm">
+                                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="font-medium text-foreground">{getOrganizationName(organizations, user?.parent_id)}</span>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <Badge variant="outline" className="font-normal">
+                                {user.role_type === "Super Admin" || user.role_type === "Org Admin" ? "Admin" : "Mobile App"}
+                              </Badge>
+                            </td>
+                            <td className="p-4">
+                              <Badge variant={getRoleBadgeVariant(user.role_type)}>
+                                {user.role_type}
+                              </Badge>
+                            </td>
+                            <td className="p-4">
+                              <Badge variant={user.is_active ? "default" : "secondary"} className="font-normal">
+                                {user.is_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center justify-end gap-2">
+                                {can(PERMISSIONS.USER_UPDATE) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs hover:bg-primary/10 hover:text-primary"
+                                    onClick={() => openEditSheet(user)}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {/* <DropdownMenuItem>View Profile</DropdownMenuItem>
                               <DropdownMenuItem>Change Role</DropdownMenuItem>
                               <DropdownMenuItem>Reset Password</DropdownMenuItem> */}
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    {can(PERMISSIONS.USER_DELETE) && (
-                                    <DropdownMenuItem
-                                      onSelect={(e) => {
-                                        e.preventDefault();
-                                        setDeleteUserId(user.id);
-                                      }}
-                                      className="text-destructive"
-                                    >
-                                      Delete
-                                    </DropdownMenuItem>
-                                      )}
-                                  </AlertDialogTrigger>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        {can(PERMISSIONS.USER_DELETE) && (
+                                          <DropdownMenuItem
+                                            onSelect={(e) => {
+                                              e.preventDefault();
+                                              setDeleteUserId(user.id);
+                                            }}
+                                            className="text-destructive"
+                                          >
+                                            Delete
+                                          </DropdownMenuItem>
+                                        )}
+                                      </AlertDialogTrigger>
 
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the user.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the user.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
 
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      {can(PERMISSIONS.USER_DELETE) && (
-                                      <AlertDialogAction
-                                        onClick={handleDeleteUser}
-                                        className="bg-destructive text-white hover:bg-destructive/90"
-                                      >
-                                        Delete
-                                      </AlertDialogAction>
-                                      )}
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          {can(PERMISSIONS.USER_DELETE) && (
+                                            <AlertDialogAction
+                                              onClick={handleDeleteUser}
+                                              className="bg-destructive text-white hover:bg-destructive/90" 
+                                              disabled={isDeleting}
+                                            >
+                                              {isDeleting && <ButtonLoader />}
+                                              {isDeleting ? "Deleting..." : "Delete"}
+                                            </AlertDialogAction>
+                                          )}
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
 
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </td>
-                      </tr>
-                    )))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </td>
+                          </tr>
+                        )))}
                   </tbody>
                 </table>
               }
@@ -632,8 +654,11 @@ const UsersPage = () => {
           <SheetFooter className="border-t pt-4 mt-auto">
             <Button variant="outline" onClick={() => setIsAddSheetOpen(false)}>Cancel</Button>
             {can(PERMISSIONS.USER_CREATE) && (
-            <Button onClick={handleAddUser}>Add User</Button>
-              )}
+              <Button onClick={handleAddUser} disabled={isAdding}>
+                {isAdding && <ButtonLoader />}
+                {isAdding ? "Adding..." : "Add User"}
+              </Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -761,8 +786,11 @@ const UsersPage = () => {
           <SheetFooter className="border-t pt-4 mt-auto">
             <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>Cancel</Button>
             {can(PERMISSIONS.USER_UPDATE) && (
-            <Button onClick={handleEditUser}>Update User</Button>
-              )}
+              <Button onClick={handleEditUser} disabled={isUpdating}>
+                {isUpdating && <ButtonLoader />}
+                {isUpdating ? "Updating..." : "Update User"}
+              </Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>

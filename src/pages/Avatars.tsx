@@ -18,6 +18,7 @@ import { getLoginUserOrganization, getOrganizationName } from "@/lib/lookupUtils
 import { API_BASE_URL } from '../config/apiConfig';
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 import {
   Table,
   TableBody,
@@ -296,6 +297,9 @@ const Avatars = () => {
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarData | null>(null);
   const [avatarOptions, setaAvatarOptions] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [metaData, setMetaData] = useState<any>({
     constants: {},
     schema: { enums: {} }
@@ -346,7 +350,7 @@ const Avatars = () => {
 
   const loadMetaData = async () => {
     try {
-      const response = await fetchMetaData();
+      const response = fetchMetaData();
       console.log(' response--', response)
       if (response) {
 
@@ -359,7 +363,7 @@ const Avatars = () => {
   };
   const loadAvatars = async () => {
     try {
-      await fetchOrganizations()
+       fetchOrganizations()
         .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
         .catch(() => setOrganizations(getLoginUserOrganization()));
       const apiData = await fetchAvatars();
@@ -442,6 +446,7 @@ const Avatars = () => {
     }
 
     try {
+      setIsAdding(true);
       const payload = {
         organization_id: formData.organization,
         name: formData.name,
@@ -469,9 +474,11 @@ const Avatars = () => {
       } else {
         toast.error(res.data.message || "Failed to create avatar");
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error creating avatar");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Error creating avatar");
+    } finally {   
+      setIsAdding(false);
     }
   };
 
@@ -480,6 +487,7 @@ const Avatars = () => {
     if (!selectedAvatar) return;
 
     try {
+      setIsUpdating(true);
       const payload = {
         organization_id: formData.organization,
         name: formData.name,
@@ -507,9 +515,11 @@ const Avatars = () => {
       } else {
         toast.error(res.data.message || "Failed to update avatar");
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error updating avatar");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Error updating avatar");
+    } finally { 
+      setIsUpdating(false);
     }
   };
 
@@ -517,6 +527,7 @@ const Avatars = () => {
     if (!selectedAvatar) return;
 
     try {
+      setIsDeleting(true);
       const res = deleteAvatar(selectedAvatar.id);
 
       if (res) {
@@ -527,9 +538,11 @@ const Avatars = () => {
       } else {
         toast.error("Failed to delete avatar");
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error deleting avatar");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Error deleting avatar");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -860,7 +873,10 @@ const Avatars = () => {
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsCreateSheetOpen(false)}>Cancel</Button>
             {can(PERMISSIONS.AVATAR_CREATE) && (
-              <Button onClick={handleCreateAvatar}>Create Avatar</Button>
+              <Button onClick={handleCreateAvatar} disabled={isAdding}>
+                {isAdding && <ButtonLoader />}
+                {isAdding ? "Creating..." : "Create Avatar"}
+              </Button>
             )}
           </SheetFooter>
         </SheetContent>
@@ -888,7 +904,10 @@ const Avatars = () => {
           <SheetFooter className="mt-6">
             <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>Cancel</Button>
             {can(PERMISSIONS.AVATAR_UPDATE) && (
-              <Button onClick={handleEditAvatar}>Save Changes</Button>
+              <Button onClick={handleEditAvatar} disabled={isUpdating}>
+                {isUpdating && <ButtonLoader />}
+                {isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
             )}
           </SheetFooter>
         </SheetContent>
@@ -922,7 +941,10 @@ const Avatars = () => {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteAvatar}>Delete</Button>
+            <Button variant="destructive" onClick={handleDeleteAvatar} disabled={isDeleting}>
+              {isDeleting && <ButtonLoader />}
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

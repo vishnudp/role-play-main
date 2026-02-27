@@ -43,6 +43,7 @@ import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, han
 import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File, Eye } from "lucide-react";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 
 const Documents = () => {
   const { can } = usePermission();
@@ -62,6 +63,11 @@ const Documents = () => {
   const [selectedOrg, setSelectedOrg] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // For demo purposes, assume super admin
   const isSuperAdmin = true;
 
@@ -75,7 +81,7 @@ const Documents = () => {
         await fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
-        await fetchUsers()
+        fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
       } finally {
@@ -108,6 +114,7 @@ const Documents = () => {
     const isFile = selectedFile && typeof selectedFile === 'object' && typeof selectedFile.name === 'string' && typeof selectedFile.size === 'number';
     console.log('Uploading file:', selectedFile, isFile, selectedFile && selectedFile.name);
     try {
+      setIsAdding(true);
       await uploadDocument({
         name: documentName,
         organization_id: isSuperAdmin ? selectedOrg : undefined,
@@ -122,22 +129,26 @@ const Documents = () => {
       await reloadDocuments();
       resetForm();
       setIsUploadSheetOpen(false);
-    } catch (e) {
-      toast.error("Failed to upload document.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to upload document.");
+    } finally {
+      setIsAdding(false);
     }
   };
 
   const handleDelete = async () => {
     if (!docToDelete) return;
     try {
+      setIsDeleting(true);
       await deleteDocument(docToDelete.id);
       toast.success("Document deleted successfully!");
       await reloadDocuments();
-    } catch (e) {
-      toast.error("Failed to delete document.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete document.");
     } finally {
       setDeleteDialogOpen(false);
       setDocToDelete(null);
+      setIsDeleting(false);
     }
   };
 
@@ -166,10 +177,10 @@ const Documents = () => {
             </p>
           </div>
           {can(PERMISSIONS.DOCUMENT_CREATE) && (
-          <Button onClick={() => setIsUploadSheetOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Upload Document
-          </Button>
+            <Button onClick={() => setIsUploadSheetOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Upload Document
+            </Button>
           )}
         </div>
 
@@ -278,25 +289,25 @@ const Documents = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 {can(PERMISSIONS.DOCUMENT_READ) && (
-                                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
-                                  <Eye className="h-4 w-4" />
-                                  View
-                                </DropdownMenuItem>
+                                  <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleView(doc)}>
+                                    <Eye className="h-4 w-4" />
+                                    View
+                                  </DropdownMenuItem>
                                 )}
                                 {can(PERMISSIONS.DOCUMENT_READ) && (
-                                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleDownload(doc)}>
-                                  <Download className="h-4 w-4" />
-                                  Download
-                                </DropdownMenuItem>
+                                  <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleDownload(doc)}>
+                                    <Download className="h-4 w-4" />
+                                    Download
+                                  </DropdownMenuItem>
                                 )}
                                 {can(PERMISSIONS.DOCUMENT_DELETE) && (
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                  onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                    onClick={() => { setDocToDelete(doc); setDeleteDialogOpen(true); }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -319,7 +330,10 @@ const Documents = () => {
             <p>Are you sure you want to delete <b>{docToDelete?.name}</b>?</p>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+                {isDeleting && <ButtonLoader />}
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -414,9 +428,10 @@ const Documents = () => {
             </Button>
             <Button
               onClick={handleUpload}
-              disabled={!documentName || !selectedFile || (isSuperAdmin && !selectedOrg)}
+              disabled={!documentName || !selectedFile || (isSuperAdmin && !selectedOrg) || isAdding}
             >
-              Upload Document
+              {isAdding && <ButtonLoader />}
+              {isAdding ? "Uploading..." : "Upload Document"}
             </Button>
           </SheetFooter>
         </SheetContent>

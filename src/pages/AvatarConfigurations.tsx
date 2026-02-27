@@ -44,6 +44,7 @@ import { Plus, Search, FileText, Download, Trash2, MoreHorizontal, Upload, File,
 import { API_BASE_URL } from "@/config/apiConfig";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 
 
 const AvatarConfigurations = () => {
@@ -65,6 +66,10 @@ const AvatarConfigurations = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarId, setAvatarId] = useState("");
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   // For demo purposes, assume super admin
   const isSuperAdmin = true;
 
@@ -75,7 +80,7 @@ const AvatarConfigurations = () => {
         // Fetch organizations
         let orgs = [];
         try {
-          orgs = await fetchOrganizations();
+          orgs = fetchOrganizations();
           orgs = Array.isArray(orgs) ? orgs : getLoginUserOrganization();
         } catch (err) {
           orgs = getLoginUserOrganization();
@@ -85,7 +90,7 @@ const AvatarConfigurations = () => {
         // Fetch users
         let usersList = [];
         try {
-          usersList = await fetchUsers();
+          usersList = fetchUsers();
           usersList = Array.isArray(usersList) ? usersList : [];
         } catch (err) {
           usersList = [];
@@ -146,26 +151,31 @@ const AvatarConfigurations = () => {
     formData.append("status", "ACTIVE");          // Default status
     formData.append("photo", selectedFile);
     try {
+      setIsAdding(true);
       await uploadAvatarConfiguration(
         formData);
       toast.success("Avatar configuration uploaded successfully!");
       await reloadAvatarConfigurations();
       resetForm();
       setIsUploadSheetOpen(false);
-    } catch (e) {
-      toast.error("Failed to upload avatar configuration.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to upload avatar configuration.");
+    } finally {
+      setIsAdding(false);
     }
   };
 
   const handleDelete = async () => {
     if (!docToDelete) return;
     try {
+      setIsDeleting(true);
       await deleteAvatarConfiguration(docToDelete.id);
       toast.success("Avatar deleted successfully!");
       await reloadAvatarConfigurations();
-    } catch (e) {
-      toast.error("Failed to delete avatar.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete avatar.");
     } finally {
+      setIsDeleting(false);
       setDeleteDialogOpen(false);
       setDocToDelete(null);
     }
@@ -336,7 +346,10 @@ const AvatarConfigurations = () => {
             <p>Are you sure you want to delete <b>{docToDelete?.name}</b>?</p>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+                {isDeleting && <ButtonLoader />}
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -426,9 +439,10 @@ const AvatarConfigurations = () => {
             </Button>
             <Button
               onClick={handleUpload}
-              disabled={!documentName || !avatarId || !selectedFile} // simple check
+              disabled={!documentName || !avatarId || !selectedFile || isAdding} // simple check
             >
-              Upload Avatar Configuration
+              {isAdding && <ButtonLoader />}
+              {isAdding ? "Uploading..." : "Upload Avatar Configuration"}
             </Button>
 
           </SheetFooter>

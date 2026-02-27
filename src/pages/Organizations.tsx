@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
+
 
 interface Document {
   id: string;
@@ -46,9 +48,12 @@ const Organizations = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgToDelete, setOrgToDelete] = useState<any>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+
   const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [currentDocument, setCurrentDocument] = useState<Document>({
     id: Date.now().toString(),
@@ -84,10 +89,10 @@ const Organizations = () => {
         await fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
-        await fetchDocuments()
+         fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
-        await fetchUsers()
+         fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
       } finally {
@@ -141,6 +146,7 @@ const Organizations = () => {
 
   const handleCreateOrganization = async () => {
     try {
+      setIsAdding(true);
       const payload = {
         name: formData.name,
         email: formData.email,
@@ -158,11 +164,6 @@ const Organizations = () => {
 
       setOrganizations((prev) => [...prev, res.data]);
 
-      setIsAddSheetOpen(false);
-
-      const updatedOrgs = await fetchOrganizations();
-      setOrganizations(Array.isArray(updatedOrgs) ? updatedOrgs : []);
-
       // Reset form
       setFormData({
         name: "",
@@ -176,11 +177,18 @@ const Organizations = () => {
         contact_person_email: "",
         is_active: true,
       });
+
+
+
+      const updatedOrgs = await fetchOrganizations();
+      setOrganizations(Array.isArray(updatedOrgs) ? updatedOrgs : []);
+      setIsAddSheetOpen(false);
+
       toast.success("Organization created successfully!");
     } catch (error) {
       console.error("Create org failed:", error);
-      toast.error(error?.details?.[0]?.message || "Failed to create organization.");
-    }
+      toast.error(error?.message || "Failed to create organization.");
+    } finally { setIsAdding(false); }
   };
 
   const handleEditOrg = (org: any) => {
@@ -218,7 +226,7 @@ const Organizations = () => {
       toast.success("Organization deleted successfully!");
     } catch (error) {
       console.error("Delete failed:", error);
-      toast.error(error?.details?.[0]?.message || "Failed to delete organization.");
+      toast.error(error?.message || "Failed to delete organization.");
     } finally {
       setIsDeleting(false);
     }
@@ -230,6 +238,7 @@ const Organizations = () => {
     if (!selectedOrg) return;
 
     try {
+      setIsUpdating(true);
       const payload = {
         name: formData.name,
         email: formData.email,
@@ -263,7 +272,9 @@ const Organizations = () => {
       toast.success("Organization updated successfully!");
     } catch (error) {
       console.error("Update failed:", error);
-      toast.error(error?.details?.[0]?.message || "Failed to update organization." || error?.message || "An error occurred while updating the organization.");
+      toast.error(error?.message || "Failed to update organization.");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -338,7 +349,21 @@ const Organizations = () => {
           {/* Only render if user has ORG_CREATE permission */}
           {can(PERMISSIONS.ORG_CREATE) && (
             <Button
-              onClick={() => setIsAddSheetOpen(true)}
+              onClick={() => {
+                setFormData({
+                  name: "",
+                  email: "",
+                  password: "",
+                  phone: "",
+                  address: "",
+                  description: "",
+                  contact_person_name: "",
+                  contact_person_phone: "",
+                  contact_person_email: "",
+                  is_active: true,
+                });
+                setIsAddSheetOpen(true);
+              }}
               className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -379,7 +404,7 @@ const Organizations = () => {
                 </TableHeader>
                 <TableBody>
                   {
-                  organizations.length === 0 ? (
+                    organizations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                           <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
@@ -387,87 +412,88 @@ const Organizations = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                  organizations
-                    .filter((org) => {
-                      const query = searchQuery.toLowerCase();
-                      return (
-                        org?.name?.toLowerCase().includes(query) ||
-                        org?.email?.toLowerCase().includes(query) ||
-                        org?.phone?.toLowerCase().includes(query)
-                      );
-                    })
-                    .map((org) => (
-                      <TableRow key={org.id} className="border-border/50 hover:bg-muted/30">
-                        <TableCell>
-                          <p className="font-semibold text-foreground">{org.name}</p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={org.is_active ? "default" : "secondary"}>
-                            {org.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            {can(PERMISSIONS.ORG_UPDATE) && (
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditOrg(org)}>
-                              <Edit className="h-3.5 w-3.5 mr-1.5" />
-                              Edit
-                            </Button>
-                            )}
-
-                            {can(PERMISSIONS.ORG_READ) && (
-
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewOrg(org)}>
-                              View
-                            </Button>
-                            )}
-
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                {can(PERMISSIONS.ORG_DELETE) && (
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="h-8"
-                                  onClick={() => setOrgToDelete(org)}
-                                >
-                                  Delete
-                                </Button>
+                      organizations
+                        .filter((org) => {
+                          const query = searchQuery.toLowerCase();
+                          return (
+                            org?.name?.toLowerCase().includes(query) ||
+                            org?.email?.toLowerCase().includes(query) ||
+                            org?.phone?.toLowerCase().includes(query)
+                          );
+                        })
+                        .map((org) => (
+                          <TableRow key={org.id} className="border-border/50 hover:bg-muted/30">
+                            <TableCell>
+                              <p className="font-semibold text-foreground">{org.name}</p>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={org.is_active ? "default" : "secondary"}>
+                                {org.is_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-2 justify-end">
+                                {can(PERMISSIONS.ORG_UPDATE) && (
+                                  <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditOrg(org)}>
+                                    <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                    Edit
+                                  </Button>
                                 )}
-                              </AlertDialogTrigger>
 
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Delete Organization
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete{" "}
-                                    <strong>{org.name}</strong>?
-                                    This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
+                                {can(PERMISSIONS.ORG_READ) && (
 
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setOrgToDelete(null)}>
-                                    Cancel
-                                  </AlertDialogCancel>
+                                  <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewOrg(org)}>
+                                    View
+                                  </Button>
+                                )}
 
-                                  <AlertDialogAction
-                                    onClick={handleDeleteOrganization}
-                                    disabled={isDeleting}
-                                    className="bg-destructive hover:bg-destructive/90"
-                                  >
-                                    {isDeleting ? "Deleting..." : "Delete"}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    {can(PERMISSIONS.ORG_DELETE) && (
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="h-8"
+                                        onClick={() => setOrgToDelete(org)}
+                                      >
+                                        Delete
+                                      </Button>
+                                    )}
+                                  </AlertDialogTrigger>
 
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )))}
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete Organization
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete{" "}
+                                        <strong>{org.name}</strong>?
+                                        This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel onClick={() => setOrgToDelete(null)}>
+                                        Cancel
+                                      </AlertDialogCancel>
+
+                                      <AlertDialogAction
+                                        onClick={handleDeleteOrganization}
+                                        disabled={isDeleting}
+                                        className="bg-destructive hover:bg-destructive/90"
+                                      >
+                                        {isDeleting && <ButtonLoader />}
+                                        {isDeleting ? "Deleting..." : "Delete"}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )))}
                 </TableBody>
               </Table>
             }
@@ -514,12 +540,14 @@ const Organizations = () => {
                       <div className="space-y-2">
                         <Label htmlFor="login-email">Login Email *</Label>
                         <Input id="login-email" type="email" placeholder="login@example.com" required value={formData.email}
-                          onChange={(e) => handleInputChange("email", e.target.value)} />
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                          autoComplete="off" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="login-password">Password *</Label>
                         <Input id="login-password" type="password" placeholder="Enter password" required value={formData.password}
-                          onChange={(e) => handleInputChange("password", e.target.value)} />
+                          onChange={(e) => handleInputChange("password", e.target.value)}
+                          autoComplete="new-password" />
                       </div>
                     </div>
                   </div>
@@ -572,9 +600,11 @@ const Organizations = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.ORG_CREATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleCreateOrganization}>
-                  Create Organization
-                </Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleCreateOrganization}
+                    disabled={isAdding}>
+                    {isAdding && <ButtonLoader />}
+                    {isAdding ? "Creating..." : "Create Organization"}
+                  </Button>
                 )}
               </div>
             </SheetFooter>
@@ -620,12 +650,14 @@ const Organizations = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="edit-login-email">Login Email *</Label>
-                          <Input id="edit-login-email" type="email" placeholder="login@example.com" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
+                          <Input id="edit-login-email" type="email" placeholder="login@example.com" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required
+                            autoComplete="off" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="edit-login-password">Password</Label>
                           <Input id="edit-login-password" type="password" placeholder="Leave blank to keep current"
                             value={formData.password}
+                            autoComplete="new-password"
                             onChange={(e) => handleInputChange("password", e.target.value)}
                           />
                         </div>
@@ -677,9 +709,12 @@ const Organizations = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.ORG_UPDATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleUpdateOrganization}>
-                  Save Changes
-                </Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleUpdateOrganization}
+                    disabled={isUpdating}>
+
+                    {isUpdating && <ButtonLoader />}
+                    {isUpdating ? "Saving..." : "Save Changes"}
+                  </Button>
                 )}
               </div>
             </SheetFooter>

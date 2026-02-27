@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 interface Permission {
   module: string;
   [action: string]: boolean | string;
@@ -66,18 +67,22 @@ const Roles = () => {
   const [editDescription, setEditDescription] = useState("");
   const [selectedOrgId, setSelectedOrgId] = useState<string>("all");
 
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
-        await fetchOrganizations()
+         fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
         await fetchRoles()
           .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
           .catch(() => setRoles([]));
 
-        await fetchMetaData()
+         fetchMetaData()
           .then((meta) => {
             console.log("META RESPONSE:", meta); // 👈 add this
             setMetaData(meta);
@@ -113,19 +118,22 @@ const Roles = () => {
     if (!roleToDelete) return;
 
     try {
+      setIsDeleting(true);
       await deleteRoleApi(roleToDelete.id); // your API call
       setRoles((prev) => prev.filter((r) => r.id !== roleToDelete.id)); // remove from UI
       setIsDeleteDialogOpen(false);
       setRoleToDelete(null);
-       await fetchRoles()
-          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
-          .catch(() => setRoles([]));
+      await fetchRoles()
+        .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+        .catch(() => setRoles([]));
       toast.success("Role deleted successfully");
 
     } catch (error) {
       console.error("Failed to delete role:", error);
-      toast.error("Failed to delete role. Please try again.");
+      toast.error(error?.message || "Failed to delete role. Please try again.");
       // optionally show toast / alert
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -185,18 +193,21 @@ const Roles = () => {
     };
 
     try {
+      setIsAdding(true);
       const newRole = await createRole(payload); // API call
       setRoles((prev) => [...prev, newRole]);
       setIsAddSheetOpen(false);
       setAddDescription("");
       setSelectedOrgId("all"); // reset
-       await fetchRoles()
-          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
-          .catch(() => setRoles([]));
+      await fetchRoles()
+        .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+        .catch(() => setRoles([]));
       toast.success("Role created successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to create role");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Failed to create role");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -214,16 +225,19 @@ const Roles = () => {
     };
 
     try {
+      setIsUpdating(true);
       const updatedRole = await updateRoleApi(selectedRole.id, payload); // API call
       setRoles((prev) => prev.map((r) => (r.id === selectedRole.id ? updatedRole : r)));
       setIsEditSheetOpen(false);
-       await fetchRoles()
-          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
-          .catch(() => setRoles([]));
+      await fetchRoles()
+        .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+        .catch(() => setRoles([]));
       toast.success("Role updated successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update role");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Failed to update role");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -272,6 +286,11 @@ const Roles = () => {
 
     const grouped: Record<string, Permission> = {};
 
+    // 👇 Define module-specific allowed actions
+    const moduleActionOverrides: Record<string, string[]> = {
+      ORG_DOCUMENT: ["view", "upload", "delete"], // only these allowed
+    };
+
     Object.keys(permissionsObject).forEach((key) => {
       const parts = key.split("_");
       const actionRaw = parts.pop(); // CREATE, READ, UPDATE, etc.
@@ -285,6 +304,13 @@ const Roles = () => {
       let action = actionRaw?.toLowerCase();
       if (action === "read") action = "view";
       if (action === "update") action = "edit";
+
+      if (
+        moduleActionOverrides[module] &&
+        !moduleActionOverrides[module].includes(action!)
+      ) {
+        return;
+      }
 
       grouped[module][action!] = defaultChecked; // use flag
     });
@@ -328,10 +354,10 @@ const Roles = () => {
       // For Add → reset all to false
       const regenerated = buildPermissionsFromMeta(metaData, false);
       setPermissions(regenerated);
-      setAddDescription("");
-      setSelectedOrgId("all");
-      const roleInput = document.getElementById("role-name") as HTMLInputElement;
-      if (roleInput) roleInput.value = "";
+      // setAddDescription("");
+      // setSelectedOrgId("all");
+      // const roleInput = document.getElementById("role-name") as HTMLInputElement;
+      // if (roleInput) roleInput.value = "";
     } else if (mode === "edit" && role) {
       // For Edit → load role’s permissions
       const allPermissions = buildPermissionsFromMeta(metaData);
@@ -348,10 +374,10 @@ const Roles = () => {
       });
 
       setPermissions(mergedPermissions);
-      setEditDescription(role.description || "");
-      setSelectedOrgId(role.parent_id?.toString() || "all");
-      const roleInput = document.getElementById("edit-role-name") as HTMLInputElement;
-      if (roleInput) roleInput.value = role.name;
+      // setEditDescription(role.description || "");
+      // setSelectedOrgId(role.parent_id?.toString() || "all");
+      // const roleInput = document.getElementById("edit-role-name") as HTMLInputElement;
+      // if (roleInput) roleInput.value = role.name;
     }
   };
 
@@ -453,16 +479,20 @@ const Roles = () => {
 
                 {actionKeys.map((action) => (
                   <TableCell key={action} className="text-center">
-                    <Checkbox
-                      checked={(permission as any)[action] ?? false}
-                      onCheckedChange={(checked) =>
-                        handlePermissionChange(
-                          index,
-                          action as any,
-                          checked as boolean
-                        )
-                      }
-                    />
+                    {permission[action] !== undefined ? (
+                      <Checkbox
+                        checked={(permission as any)[action]}
+                        onCheckedChange={(checked) =>
+                          handlePermissionChange(
+                            index,
+                            action as any,
+                            checked as boolean
+                          )
+                        }
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
@@ -483,13 +513,13 @@ const Roles = () => {
             <p className="text-muted-foreground mt-2">Manage RBAC permissions and custom roles for organizations</p>
           </div>
           {can(PERMISSIONS.ROLE_CREATE) && (
-          <Button
-            onClick={handleOpenAddSheet}
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Role
-          </Button>
+            <Button
+              onClick={handleOpenAddSheet}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Role
+            </Button>
           )}
         </div>
 
@@ -553,65 +583,65 @@ const Roles = () => {
                         (orgFilter === "all" && role.organization === "All Organizations");
                       return matchesSearch && matchesOrg;
                     }).length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                          <p>No roles found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                  roles
-                    .filter((role) => {
-                      const matchesSearch = role.name.toLowerCase().includes(searchQuery?.toLowerCase()) ||
-                        getOrganizationName(organizations, role.parent_id).toLowerCase().includes(searchQuery?.toLowerCase());
-                      const matchesOrg = orgFilter === "all" || (orgFilter === searchQuery?.toLowerCase()) || (orgFilter === getOrganizationName(organizations, role.parent_id)) ||
-                        (orgFilter === "all" && role.organization === "All Organizations");
-                      return matchesSearch && matchesOrg;
-                    })
-                    .map((role) => (
-                      <TableRow key={role.id} className="border-border/50 hover:bg-muted/30">
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-primary" />
-                            <p className="font-semibold text-foreground">{role.name}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{getOrganizationName(organizations, role.parent_id)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                            <Users className="h-3.5 w-3.5" />
-                            {role.user_count}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={role.is_active ? "default" : "secondary"}>
-                            {role.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            {can(PERMISSIONS.ROLE_UPDATE) && (
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRole(role)}>
-                              <Edit className="h-3.5 w-3.5 mr-1.5" />
-                              Edit
-                            </Button>
-                            )}
-                            {can(PERMISSIONS.ROLE_READ) && (
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewRole(role)}>
-                              View
-                            </Button>
-                            )}
-                            {can(PERMISSIONS.ROLE_DELETE) && (
-                            <Button variant="destructive" size="sm" className="h-8" onClick={() => handleDeleteClick(role)}>
-                              Delete
-                            </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                        <p>No roles found</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    roles
+                      .filter((role) => {
+                        const matchesSearch = role.name.toLowerCase().includes(searchQuery?.toLowerCase()) ||
+                          getOrganizationName(organizations, role.parent_id).toLowerCase().includes(searchQuery?.toLowerCase());
+                        const matchesOrg = orgFilter === "all" || (orgFilter === searchQuery?.toLowerCase()) || (orgFilter === getOrganizationName(organizations, role.parent_id)) ||
+                          (orgFilter === "all" && role.organization === "All Organizations");
+                        return matchesSearch && matchesOrg;
+                      })
+                      .map((role) => (
+                        <TableRow key={role.id} className="border-border/50 hover:bg-muted/30">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-primary" />
+                              <p className="font-semibold text-foreground">{role.name}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{getOrganizationName(organizations, role.parent_id)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Users className="h-3.5 w-3.5" />
+                              {role.user_count}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="default">
+                              Active
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              {can(PERMISSIONS.ROLE_UPDATE) && (
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditRole(role)}>
+                                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                  Edit
+                                </Button>
+                              )}
+                              {can(PERMISSIONS.ROLE_READ) && (
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewRole(role)}>
+                                  View
+                                </Button>
+                              )}
+                              {can(PERMISSIONS.ROLE_DELETE) && (
+                                <Button variant="destructive" size="sm" className="h-8" onClick={() => handleDeleteClick(role)}>
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
                   )}
-                  
+
                 </TableBody>
               </Table>
             }
@@ -694,9 +724,10 @@ const Roles = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.ROLE_CREATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleCreateRole}>
-                  Create Role
-                </Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleCreateRole} disabled={isAdding}>
+                    {isAdding && <ButtonLoader />}
+                    {isAdding ? "Creating..." : "Create Role"}
+                  </Button>
                 )}
               </div>
             </SheetFooter>
@@ -781,9 +812,10 @@ const Roles = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.ROLE_UPDATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleSaveRole}>
-                  Save Changes
-                </Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleSaveRole} disabled={isUpdating}>
+                    {isUpdating && <ButtonLoader />}
+                    {isUpdating ? "Saving..." : "Save Changes"}
+                  </Button>
                 )}
               </div>
             </SheetFooter>
@@ -882,16 +914,16 @@ const Roles = () => {
                   Close
                 </Button>
                 {can(PERMISSIONS.ROLE_UPDATE) && (
-                <Button
-                  className="flex-1 bg-gradient-primary"
-                  onClick={() => {
-                    setIsViewSheetOpen(false);
-                    if (selectedRole) handleEditRole(selectedRole);
-                  }}
-                >
-                  Edit Role
-                </Button>
-                  )}
+                  <Button
+                    className="flex-1 bg-gradient-primary"
+                    onClick={() => {
+                      setIsViewSheetOpen(false);
+                      if (selectedRole) handleEditRole(selectedRole);
+                    }}
+                  >
+                    Edit Role
+                  </Button>
+                )}
               </div>
             </SheetFooter>
           </SheetContent>
@@ -910,9 +942,10 @@ const Roles = () => {
               Cancel
             </Button>
             {can(PERMISSIONS.ROLE_DELETE) && (
-            <Button variant="destructive" onClick={confirmDeleteRole}>
-              Delete
-            </Button>
+              <Button variant="destructive" onClick={confirmDeleteRole} disabled={isDeleting}>
+                {isDeleting && <ButtonLoader />}
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>

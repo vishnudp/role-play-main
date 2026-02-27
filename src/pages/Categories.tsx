@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/alert-dialog"; // ShadCN AlertDialog
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 interface SubCategory {
   id: string;
   name: string;
@@ -83,7 +84,7 @@ interface Category {
 }
 
 const Categories = () => {
-   const { can } = usePermission();
+  const { can } = usePermission();
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,6 +99,12 @@ const Categories = () => {
   const [parentCategoryId, setParentCategoryId] = useState("");
   const [loading, setLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddingSubCategory, setIsAddingSubCategory] = useState(false);
+  const [isUpdatingSubCategory, setIsUpdatingSubCategory] = useState(false);
+  const [isDeletingSubCategory, setIsDeletingSubCategory] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "category" | "subCategory"; categoryId: string; subCategoryId?: string; name: string } | null>(null);
 
   const loadCategories = async () => {
@@ -105,9 +112,9 @@ const Categories = () => {
     try {
       const cats = await fetchCategories();
       setCategories(Array.isArray(cats) ? cats : []);
-    } catch (err) {
+    } catch (error) {
       setCategories([]);
-      toast.error("Failed to fetch categories");
+      toast.error(error?.message || "Failed to fetch categories");
     } finally {
       setLoading(false);
     }
@@ -156,6 +163,7 @@ const Categories = () => {
     if (!categoryForm.name) return toast.error("Please enter a category name");
 
     try {
+      setIsAdding(true);
       const newCategory = await addCategory({
         name: categoryForm.name,
         description: categoryForm.description,
@@ -164,8 +172,10 @@ const Categories = () => {
       resetCategoryForm();
       setIsCategorySheetOpen(false);
       toast.success("Category created successfully");
-    } catch (err) {
-      toast.error("Failed to create category");
+    } catch (error) {
+      toast.error(error?.message || "Failed to create category");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -174,6 +184,7 @@ const Categories = () => {
     if (!selectedCategory || !categoryForm.name) return toast.error("Please enter a category name");
 
     try {
+      setIsUpdating(true);
       const updated = await editCategory(selectedCategory.id, {
         name: categoryForm.name,
         description: categoryForm.description,
@@ -182,8 +193,10 @@ const Categories = () => {
       resetCategoryForm();
       setIsCategorySheetOpen(false);
       toast.success("Category updated successfully");
-    } catch (err) {
+    } catch (error) {
       toast.error("Failed to update category");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -208,6 +221,7 @@ const Categories = () => {
     if (!subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
 
     try {
+      setIsAddingSubCategory(true);
       const newSub = await addSubCategory({
         name: subCategoryForm.name,
         description: subCategoryForm.description,
@@ -225,8 +239,10 @@ const Categories = () => {
       resetSubCategoryForm();
       setIsSubCategorySheetOpen(false);
       toast.success("Subcategory created successfully");
-    } catch (err) {
-      toast.error("Failed to create subcategory");
+    } catch (error) {
+      toast.error(error?.message || "Failed to create subcategory");
+    } finally {
+      setIsAddingSubCategory(false);
     }
   };
 
@@ -234,6 +250,7 @@ const Categories = () => {
     if (!selectedSubCategory || !subCategoryForm.name || !parentCategoryId) return toast.error("Please fill in all required fields");
 
     try {
+      setIsUpdatingSubCategory(true);
       const updated = await editSubCategory(selectedSubCategory.id, {
         name: subCategoryForm.name,
         description: subCategoryForm.description,
@@ -251,8 +268,10 @@ const Categories = () => {
       resetSubCategoryForm();
       setIsSubCategorySheetOpen(false);
       toast.success("Subcategory updated successfully");
-    } catch (err) {
-      toast.error("Failed to update subcategory");
+    } catch (error) {
+      toast.error(error?.message || "Failed to update subcategory");
+    } finally {
+      setIsUpdatingSubCategory(false);
     }
   };
 
@@ -262,6 +281,7 @@ const Categories = () => {
   };
 
   const handleDeleteSubCategory = (categoryId: string, subCategoryId: string) => {
+    
     setCategories(categories.map(c =>
       c.id === categoryId
         ? { ...c, children: c.children.filter(sc => sc.id !== subCategoryId) }
@@ -276,7 +296,9 @@ const Categories = () => {
     setIsDeleteDialogOpen(false);
 
     try {
+      
       if (deleteTarget.type === "category") {
+        setIsDeleting(true);
         await deleteCategory(deleteTarget.categoryId);
 
         toast.success(`Category "${deleteTarget.name}" deleted successfully`);
@@ -287,6 +309,7 @@ const Categories = () => {
 
 
       } else if (deleteTarget.type === "subCategory") {
+        setIsDeletingSubCategory(true);
         await deleteSubCategory(deleteTarget.subCategoryId!);
 
         toast.success(`Subcategory "${deleteTarget.name}" deleted successfully`);
@@ -300,9 +323,11 @@ const Categories = () => {
         setTimeout(() => loadCategories(), 200);
 
       }
-    } catch (err) {
-      toast.error("Failed to delete");
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete");
     } finally {
+      setIsDeleting(false);
+      setIsDeletingSubCategory(false);
       setDeleteTarget(null);
     }
   };
@@ -348,10 +373,10 @@ const Categories = () => {
             </p>
           </div>
           {can(PERMISSIONS.CATEGORY_CREATE) && (
-          <Button onClick={() => { resetCategoryForm(); setIsCategorySheetOpen(true); }} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Category
-          </Button>
+            <Button onClick={() => { resetCategoryForm(); setIsCategorySheetOpen(true); }} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Category
+            </Button>
           )}
         </div>
 
@@ -458,7 +483,7 @@ const Categories = () => {
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-3">
-                                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                  <div className="h-10 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                     <FolderTree className="h-5 w-5 text-primary" />
                                   </div>
                                   <div>
@@ -470,8 +495,8 @@ const Categories = () => {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <Badge variant="secondary" className="font-normal">
-                                  {category.children.length} subcategories
+                                <Badge variant="secondary" className="font-normal whitespace-nowrap">
+                                 <span> {category.children.length} subcategories</span>
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -482,15 +507,15 @@ const Categories = () => {
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
                                   {can(PERMISSIONS.CATEGORY_CREATE) && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 text-xs"
-                                    onClick={() => openAddSubCategorySheet(category.id)}
-                                  >
-                                    <Plus className="h-3 w-3 mr-1" />
-                                    Add Sub
-                                  </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 text-xs"
+                                      onClick={() => openAddSubCategorySheet(category.id)}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add Sub
+                                    </Button>
                                   )}
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -500,22 +525,22 @@ const Categories = () => {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                       {can(PERMISSIONS.CATEGORY_UPDATE) && (
-                                      <DropdownMenuItem
-                                        className="gap-2 cursor-pointer"
-                                        onClick={() => openEditCategorySheet(category)}
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                        Edit
-                                      </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="gap-2 cursor-pointer"
+                                          onClick={() => openEditCategorySheet(category)}
+                                        >
+                                          <Pencil className="h-4 w-4" />
+                                          Edit
+                                        </DropdownMenuItem>
                                       )}
                                       {can(PERMISSIONS.CATEGORY_DELETE) && (
-                                      <DropdownMenuItem
-                                        className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                        onClick={() => confirmDelete("category", category.id, category.name)}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                        Delete
-                                      </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                          onClick={() => confirmDelete("category", category.id, category.name)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                          Delete
+                                        </DropdownMenuItem>
                                       )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
@@ -557,22 +582,22 @@ const Categories = () => {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                           {can(PERMISSIONS.CATEGORY_UPDATE) && (
-                                          <DropdownMenuItem
-                                            className="gap-2 cursor-pointer"
-                                            onClick={() => openEditSubCategorySheet(category, subCategory)}
-                                          >
-                                            <Pencil className="h-4 w-4" />
-                                            Edit
-                                          </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              className="gap-2 cursor-pointer"
+                                              onClick={() => openEditSubCategorySheet(category, subCategory)}
+                                            >
+                                              <Pencil className="h-4 w-4" />
+                                              Edit
+                                            </DropdownMenuItem>
                                           )}
                                           {can(PERMISSIONS.CATEGORY_DELETE) && (
-                                          <DropdownMenuItem
-                                            className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                            onClick={() => confirmDelete("subCategory", category.id, subCategory.name, subCategory.id)}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                            Delete
-                                          </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                              onClick={() => confirmDelete("subCategory", category.id, subCategory.name, subCategory.id)}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                              Delete
+                                            </DropdownMenuItem>
                                           )}
                                         </DropdownMenuContent>
                                       </DropdownMenu>
@@ -645,11 +670,14 @@ const Categories = () => {
             <Button variant="outline" onClick={() => { resetCategoryForm(); setIsCategorySheetOpen(false); }}>
               Cancel
             </Button>
-              {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
-            <Button onClick={isEditMode ? handleEditCategory : handleAddCategory}>
-              {isEditMode ? "Update Category" : "Add Category"}
-            </Button>
-              )}
+            {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
+              <Button onClick={isEditMode ? handleEditCategory : handleAddCategory} disabled={isAdding || isUpdating}>
+                {isEditMode ? "Update Category" : "Add Category"}
+                {(isAdding || isUpdating) && <ButtonLoader className="ml-2" />}
+                {isAdding && "Adding..."}
+                {isUpdating && "Updating..."}
+              </Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -731,11 +759,14 @@ const Categories = () => {
             <Button variant="outline" onClick={() => { resetSubCategoryForm(); setIsSubCategorySheetOpen(false); }}>
               Cancel
             </Button>
-              {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
-            <Button onClick={isEditMode ? handleEditSubCategory : handleAddSubCategory}>
-              {isEditMode ? "Update Subcategory" : "Add Subcategory"}
-            </Button>
-              )}
+            {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
+              <Button onClick={isEditMode ? handleEditSubCategory : handleAddSubCategory} disabled={isAddingSubCategory || isUpdatingSubCategory}>
+                {isEditMode ? "Update Subcategory" : "Add Subcategory"}
+                {(isAddingSubCategory || isUpdatingSubCategory) && <ButtonLoader className="ml-2" />}
+                {isAddingSubCategory && "Adding..."}
+                {isUpdatingSubCategory && "Updating..."}
+              </Button>
+            )}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -752,9 +783,10 @@ const Categories = () => {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
             {can(PERMISSIONS.CATEGORY_DELETE) && (
-            <Button variant="destructive" onClick={handleConfirmDelete}>
-              Delete
-            </Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}  disabled={isDeleting || isDeletingSubCategory}>
+                {isDeleting && <ButtonLoader />}
+                {isDeleting || isDeletingSubCategory ? "Deleting..." : "Delete"}
+              </Button>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>

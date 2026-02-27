@@ -26,6 +26,7 @@ import { getOrganizationName, formatToLongDate, getLoginUserOrganization } from 
 import { toast } from "sonner";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 
 interface Question {
   id: number;
@@ -79,6 +80,9 @@ const PrecallPlans = () => {
   const [editOrgId, setEditOrgId] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [newQuestion, setNewQuestion] = useState<Omit<Question, "id">>({
     question: "",
     answer: "",
@@ -103,7 +107,7 @@ const PrecallPlans = () => {
       setLoading(true);
 
       try {
-        await fetchOrganizations()
+         fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
 
@@ -136,17 +140,17 @@ const PrecallPlans = () => {
       toast.success("Plan created successfully!");
       setIsAddSheetOpen(false);
       fetchPreCallPlans()
-          .then((res) => {
-            if (Array.isArray(res)) {
-              setPlans(res);
-            } else {
-              setPlans([]);
-            }
-          })
-          .catch(() => setPlans([]));
+        .then((res) => {
+          if (Array.isArray(res)) {
+            setPlans(res);
+          } else {
+            setPlans([]);
+          }
+        })
+        .catch(() => setPlans([]));
       // await loadPlans(); // refetch from API
-    } catch (err) {
-      toast.error("Failed to create plan.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to create plan.");
     }
   };
 
@@ -163,14 +167,14 @@ const PrecallPlans = () => {
       setEditOrgId(org ? org.id.toString() : "");
     }
     fetchPreCallPlans()
-          .then((res) => {
-            if (Array.isArray(res)) {
-              setPlans(res);
-            } else {
-              setPlans([]);
-            }
-          })
-          .catch(() => setPlans([]));
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setPlans(res);
+        } else {
+          setPlans([]);
+        }
+      })
+      .catch(() => setPlans([]));
     setIsEditSheetOpen(true);
   };
 
@@ -188,10 +192,19 @@ const PrecallPlans = () => {
 
 
       toast.success("Plan updated successfully!");
+      fetchPreCallPlans()
+        .then((res) => {
+          if (Array.isArray(res)) {
+            setPlans(res);
+          } else {
+            setPlans([]);
+          }
+        })
+        .catch(() => setPlans([]));
       setIsEditSheetOpen(false);
       setSelectedPlan(null);
-    } catch (err) {
-      toast.error("Failed to update plan.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to update plan.");
     }
   };
 
@@ -274,8 +287,8 @@ const PrecallPlans = () => {
       setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
 
       toast.success("Question deleted successfully!");
-    } catch {
-      toast.error("Failed to delete question.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to delete question.");
     }
   };
 
@@ -313,8 +326,8 @@ const PrecallPlans = () => {
       setIsQuestionsSheetOpen(false);
       setSelectedPlan(null);
       toast.success("All questions saved successfully!");
-    } catch {
-      toast.error("Failed to save questions.");
+    } catch (error) {
+      toast.error(error?.message || "Failed to save questions.");
     }
   };
 
@@ -346,13 +359,13 @@ const PrecallPlans = () => {
             <p className="text-muted-foreground mt-2">Create and manage pre-call plans with structured questions</p>
           </div>
           {can(PERMISSIONS.PRE_CALL_PLAN_CREATE) && (
-          <Button
-            onClick={handleOpenAddSheet}
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Plan
-          </Button>
+            <Button
+              onClick={handleOpenAddSheet}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Plan
+            </Button>
           )}
         </div>
 
@@ -409,7 +422,7 @@ const PrecallPlans = () => {
                 </TableHeader>
                 <TableBody>
                   {
-                  filteredPlans.length === 0 ? (
+                    filteredPlans.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                           <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
@@ -417,62 +430,62 @@ const PrecallPlans = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                  filteredPlans.map((plan: any) => (
-                    <TableRow key={plan.id} className="border-border/50 hover:bg-muted/30">
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-primary" />
-                          <p className="font-semibold text-foreground">{plan.name}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{getOrganizationName(organizations, plan.organization_id)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <HelpCircle className="h-3.5 w-3.5" />
-                          {plan.questions.length}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={plan.is_active === "Active" ? "default" : "secondary"}>
-                          {plan.is_active === "Active" ? "default" : "secondary"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end flex-wrap">
-                          {can(PERMISSIONS.PRE_CALL_PLAN_READ) && (
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewPlan(plan)}>
-                            <Eye className="h-3.5 w-3.5 mr-1.5" />
-                            View
-                          </Button>
-                          )}
-                          {can(PERMISSIONS.PRE_CALL_PLAN_READ) && (
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleManageQuestions(plan)}>
-                            <ListChecks className="h-3.5 w-3.5 mr-1.5" />
-                            Questions
-                          </Button>
-                          )}
-                          {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditPlan(plan)}>
-                            <Edit className="h-3.5 w-3.5 mr-1.5" />
-                            Edit
-                          </Button>
-                          )}
-                          
-                          {isSuperAdmin && can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeletePlan(plan)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )))}
+                      filteredPlans.map((plan: any) => (
+                        <TableRow key={plan.id} className="border-border/50 hover:bg-muted/30">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary" />
+                              <p className="font-semibold text-foreground">{plan.name}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{getOrganizationName(organizations, plan.organization_id)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <HelpCircle className="h-3.5 w-3.5" />
+                              {plan.questions.length}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={plan.is_active ? "default" : "secondary"}>
+                              {plan.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end flex-wrap">
+                              {can(PERMISSIONS.PRE_CALL_PLAN_READ) && (
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewPlan(plan)}>
+                                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+                                  View
+                                </Button>
+                              )}
+                              {can(PERMISSIONS.PRE_CALL_PLAN_READ) && (
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleManageQuestions(plan)}>
+                                  <ListChecks className="h-3.5 w-3.5 mr-1.5" />
+                                  Questions
+                                </Button>
+                              )}
+                              {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditPlan(plan)}>
+                                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                  Edit
+                                </Button>
+                              )}
+
+                              {isSuperAdmin && can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeletePlan(plan)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )))}
                 </TableBody>
               </Table>
             }
@@ -538,9 +551,9 @@ const PrecallPlans = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.PRE_CALL_PLAN_CREATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={() => handleCreatePlan()}>
-                  Create Plan
-                </Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={() => handleCreatePlan()}>
+                    Create Plan
+                  </Button>
                 )}
               </div>
             </SheetFooter>
@@ -607,9 +620,9 @@ const PrecallPlans = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleSaveEdit}>
-                  Save Changes
-                </Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleSaveEdit}>
+                    Save Changes
+                  </Button>
                 )}
               </div>
             </SheetFooter>
@@ -662,24 +675,24 @@ const PrecallPlans = () => {
                                 </div>
                               </div>
                               {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-primary hover:text-accent"
-                                onClick={() => setEditingQuestion(q)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary hover:text-accent"
+                                  onClick={() => setEditingQuestion(q)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
                               )}
                               {can(PERMISSIONS.PRE_CALL_PLAN_DELETE) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => { setQuestionToDelete(q); setIsDeleteQuestionDialogOpen(true); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => { setQuestionToDelete(q); setIsDeleteQuestionDialogOpen(true); }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               )}
                             </div>
                           </div>
@@ -741,15 +754,15 @@ const PrecallPlans = () => {
                         </div>
                       </div>
                       {can(PERMISSIONS.PRE_CALL_PLAN_CREATE) && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={handleAddQuestion}
-                        disabled={!newQuestion.question.trim() || !newQuestion.answer.trim()}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Question
-                      </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleAddQuestion}
+                          disabled={!newQuestion.question.trim() || !newQuestion.answer.trim()}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Question
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -763,9 +776,9 @@ const PrecallPlans = () => {
                   Cancel
                 </Button>
                 {can(PERMISSIONS.PRE_CALL_PLAN_UPDATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleSaveQuestions}>
-                  Save Questions
-                </Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleSaveQuestions}>
+                    Save Questions
+                  </Button>
                 )}
               </div>
             </SheetFooter>
@@ -838,36 +851,36 @@ const PrecallPlans = () => {
                     onClick={async () => {
                       if (!selectedPlan || !editingQuestion) return;
 
-                    const payload = {
-                      question_number: questions.findIndex(q => q.id === editingQuestion.id) + 1,
-                      question: editingQuestion.question,
-                      question_type: editingQuestion.question_type.replace(/\s/g, "_"),
-                      answer: editingQuestion.answer,
-                      hint: editingQuestion.hint || "",
-                    };
+                      const payload = {
+                        question_number: questions.findIndex(q => q.id === editingQuestion.id) + 1,
+                        question: editingQuestion.question,
+                        question_type: editingQuestion.question_type.replace(/\s/g, "_"),
+                        answer: editingQuestion.answer,
+                        hint: editingQuestion.hint || "",
+                      };
 
-                    try {
-                      // Call API only if question exists in backend
-                      if (!editingQuestion.isNew) {
-                        await editPreCallPlans(selectedPlan.id, payload);
+                      try {
+                        // Call API only if question exists in backend
+                        if (!editingQuestion.isNew) {
+                          await editPreCallPlans(selectedPlan.id, payload);
+                        }
+
+                        // Update local state regardless
+                        setQuestions(
+                          questions.map((q) =>
+                            q.id === editingQuestion.id ? { ...editingQuestion, isNew: q.isNew } : q
+                          )
+                        );
+
+                        setEditingQuestion(null);
+                        toast.success("Question updated successfully!");
+                      } catch (error) {
+                        toast.error(error?.message || "Failed to update question.");
                       }
-
-                      // Update local state regardless
-                      setQuestions(
-                        questions.map((q) =>
-                          q.id === editingQuestion.id ? { ...editingQuestion, isNew: q.isNew } : q
-                        )
-                      );
-
-                      setEditingQuestion(null);
-                      toast.success("Question updated successfully!");
-                    } catch {
-                      toast.error("Failed to update question.");
-                    }
-                  }}
-                >
-                  Save
-                </Button>
+                    }}
+                  >
+                    Save
+                  </Button>
                 )}
               </SheetFooter>
             </SheetContent>
@@ -882,35 +895,35 @@ const PrecallPlans = () => {
             onOpenChange={setIsDeleteQuestionDialogOpen}
           >
             <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Question</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this question? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={async () => {
-                  if (!selectedPlan || !questionToDelete) return;
-                  try {
-                    await deletePreCallPlansQuestions(selectedPlan.id, questionToDelete.id);
-                    setQuestions(questions.filter((q) => q.id !== questionToDelete.id));
-                    setIsDeleteQuestionDialogOpen(false);
-                    const refreshedPlans = await fetchPreCallPlans();
-                    setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
-                    toast.success("Question deleted successfully!");
-                  } catch {
-                    toast.error("Failed to delete question.");
-                  }
-                }}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Question</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this question? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={async () => {
+                    if (!selectedPlan || !questionToDelete) return;
+                    try {
+                      await deletePreCallPlansQuestions(selectedPlan.id, questionToDelete.id);
+                      setQuestions(questions.filter((q) => q.id !== questionToDelete.id));
+                      setIsDeleteQuestionDialogOpen(false);
+                      const refreshedPlans = await fetchPreCallPlans();
+                      setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
+                      toast.success("Question deleted successfully!");
+                    } catch (error) {
+                      toast.error(error?.message || "Failed to delete question.");
+                    }
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
 
 

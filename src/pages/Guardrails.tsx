@@ -41,6 +41,7 @@ import { fetchGuardrails, fetchOrganizations, fetchDocuments, fetchUsers, addGua
 import { getLoginUserOrganization, getOrganizationName } from "../lib/lookupUtils";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 
 // Mock organizations
 // const organizations = [
@@ -94,6 +95,7 @@ interface GuardrailFormProps {
   setIsEditSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onSubmit: () => void;
   submitLabel: string;
+  isSubmitting: boolean;
 }
 
 
@@ -131,7 +133,8 @@ const GuardrailForm = ({
   setIsAddSheetOpen,
   setIsEditSheetOpen,
   onSubmit,
-  submitLabel
+  submitLabel,
+  isSubmitting
 }: GuardrailFormProps) => (
   <>
     <div className="flex-1 overflow-y-auto space-y-6 py-6">
@@ -345,7 +348,13 @@ const GuardrailForm = ({
         Cancel
       </Button>
       {can(PERMISSIONS.GUARDRAIL_CREATE) && (
-        <Button onClick={onSubmit}>{submitLabel}</Button>
+        <Button
+          onClick={onSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting && <ButtonLoader />}
+          {isSubmitting ? "Processing..." : submitLabel}
+        </Button>
       )}
     </SheetFooter>
   </>
@@ -369,6 +378,10 @@ const Guardrails = () => {
   const [docSearchQuery, setDocSearchQuery] = useState("");
   const [guardrailToDelete, setGuardrailToDelete] = useState<Guardrail | null>(null);
 
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -385,13 +398,13 @@ const Guardrails = () => {
         }));
         setGuardrails(normalizedGuardrails);
 
-        const orgs = await fetchOrganizations();
+        const orgs =  await fetchOrganizations();
         setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization());
 
-        const docs = await fetchDocuments();
+        const docs =  fetchDocuments();
         setDocuments(Array.isArray(docs) ? docs : []);
 
-        const users = await fetchUsers();
+        const users = fetchUsers();
         setUsers(Array.isArray(users) ? users : []);
       } catch (err) {
         console.error(err);
@@ -438,6 +451,7 @@ const Guardrails = () => {
     };
 
     try {
+      setIsAdding(true);
       await addGuardrail(payload); // call API to create new guardrail
 
       // Refetch all guardrails to get latest organizations/documents
@@ -456,9 +470,11 @@ const Guardrails = () => {
       resetForm();
       setIsAddSheetOpen(false);
       toast.success("Guardrail created successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to add guardrail");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Failed to add guardrail");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -478,6 +494,7 @@ const Guardrails = () => {
     };
 
     try {
+      setIsUpdating(true);
       await editGuardrail(selectedGuardrail.id, payload); // update API
 
       // Refetch all guardrails to get latest organizations/documents
@@ -497,9 +514,11 @@ const Guardrails = () => {
       setSelectedGuardrail(null);
       setIsEditSheetOpen(false);
       toast.success("Guardrail updated successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update guardrail");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Failed to update guardrail");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -509,13 +528,15 @@ const Guardrails = () => {
     if (!guardrailToDelete) return;
 
     try {
+      setIsDeleting(true);
       await deleteGuardrail(guardrailToDelete.id); // call API
       setGuardrails(prev => prev.filter(g => g.id !== guardrailToDelete.id));
       toast.success("Guardrail deleted successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete guardrail");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Failed to delete guardrail");
     } finally {
+      setIsDeleting(false);
       setGuardrailToDelete(null);
     }
   };
@@ -601,10 +622,10 @@ const Guardrails = () => {
             </p>
           </div>
           {can(PERMISSIONS["GUARDRAIL_CREATE"]) && (
-          <Button onClick={() => setIsAddSheetOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Guardrail
-          </Button>
+            <Button onClick={() => setIsAddSheetOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Guardrail
+            </Button>
           )}
         </div>
 
@@ -713,22 +734,22 @@ const Guardrails = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 {can(PERMISSIONS.GUARDRAIL_UPDATE) && (
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer"
-                                  onClick={() => openEditSheet(guardrail)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="gap-2 cursor-pointer"
+                                    onClick={() => openEditSheet(guardrail)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
                                 )}
                                 {can(PERMISSIONS.GUARDRAIL_DELETE) && (
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                                  onClick={() => handleDeleteGuardrail(guardrail.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                    onClick={() => handleDeleteGuardrail(guardrail.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -780,6 +801,7 @@ const Guardrails = () => {
             setIsEditSheetOpen={setIsEditSheetOpen}
             onSubmit={handleAddGuardrail}
             submitLabel="Add Guardrail"
+            isSubmitting={isAdding}
           />
 
         </SheetContent>
@@ -824,6 +846,7 @@ const Guardrails = () => {
             setIsEditSheetOpen={setIsEditSheetOpen}
             onSubmit={handleEditGuardrail}
             submitLabel="Update Guardrail"
+            isSubmitting={isUpdating}
           />
 
         </SheetContent>
@@ -838,7 +861,10 @@ const Guardrails = () => {
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setGuardrailToDelete(null)}>Cancel</Button>
-              <Button variant="destructive" onClick={confirmDeleteGuardrail}>Delete</Button>
+              <Button variant="destructive" onClick={confirmDeleteGuardrail} disabled={isDeleting}>
+                {isDeleting && <ButtonLoader />}
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
             </div>
           </div>
         </div>

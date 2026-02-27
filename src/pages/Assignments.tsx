@@ -16,6 +16,7 @@ import { fetchDocuments, uploadDocument, deleteDocument, fetchUsers, fetchOrgani
 import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, handleView, handleDownload, getLoginUserOrganization } from "../lib/lookupUtils";
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 
 interface Assignment {
   id: number;
@@ -331,6 +332,11 @@ const Assignments = () => {
   const [selectedOrganization, setSelectedOrganization] = useState<string>("");
   const [certificates, setCertificates] = useState<any[]>([]);
   const [assignmentType, setAssignmentType] = useState<"ROLE_PLAY" | "CERTIFICATE">("ROLE_PLAY");
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const filteredRolePlays = rolePlays.filter(rp => rp.organization_id === selectedOrganization);
   const filteredCertificates = certificates.filter(cert =>
     cert.organizations?.some(orgObj => orgObj.organization.id === selectedOrganization)
@@ -345,28 +351,28 @@ const Assignments = () => {
     assignedUsers: [] as string[],
   });
 
-const handleAssignmentTypeChange = (
-  type: "ROLE_PLAY" | "CERTIFICATE",
-  isEdit: boolean
-) => {
-  setAssignmentType(type);
+  const handleAssignmentTypeChange = (
+    type: "ROLE_PLAY" | "CERTIFICATE",
+    isEdit: boolean
+  ) => {
+    setAssignmentType(type);
 
-  if (!isEdit) {
-    setFormData(prev => ({
-      ...prev,
-      rolePlayIds: [],
-      certificateId: "",
-      assignedUsers: []
-    }));
+    if (!isEdit) {
+      setFormData(prev => ({
+        ...prev,
+        rolePlayIds: [],
+        certificateId: "",
+        assignedUsers: []
+      }));
 
-  } else {
-    setFormData(prev => ({
-      ...prev,
-      rolePlayIds: [],
-      certificateId: ""
-    }));
-  }
-};
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        rolePlayIds: [],
+        certificateId: ""
+      }));
+    }
+  };
 
 
   // Mock users data
@@ -411,19 +417,19 @@ const handleAssignmentTypeChange = (
     async function loadData() {
       setLoading(true);
       try {
-        await fetchOrganizations()
+         fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
-        await fetchDocuments()
+         fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
-        await fetchRolePlays()
+         fetchRolePlays()
           .then((rolePlays) => setRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
           .catch(() => setRolePlays([]));
-        await fetchUsers()
+         fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
-        await fetchCertificate()
+         fetchCertificate()
           .then((certificates) => setCertificates(Array.isArray(certificates) ? certificates : []))
           .catch(() => setCertificates([]));
         await fetchAssignment()
@@ -506,6 +512,7 @@ const handleAssignmentTypeChange = (
     const payload = buildAssignmentPayload();
 
     try {
+      setIsAdding(true);
       await createAssignment(payload); // API call
       toast.success("Assignment created successfully");
       setIsCreateSheetOpen(false);
@@ -515,7 +522,9 @@ const handleAssignmentTypeChange = (
         .catch(() => setAssignments([]));
       // Optionally refresh assignments
     } catch (error) {
-      toast.error("Failed to create assignment");
+      toast.error(error?.message || "Failed to create assignment");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -587,6 +596,7 @@ const handleAssignmentTypeChange = (
     const payload = buildAssignmentPayload();
 
     try {
+      setIsUpdating(true);
       await updateAssignmentApi(selectedAssignment.id, payload); // API call
       toast.success("Assignment updated successfully");
       setIsEditSheetOpen(false);
@@ -597,7 +607,9 @@ const handleAssignmentTypeChange = (
         .catch(() => setAssignments([]));
       // Optionally refresh assignments
     } catch (error) {
-      toast.error("Failed to update assignment");
+      toast.error(error?.message || "Failed to update assignment");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -608,9 +620,16 @@ const handleAssignmentTypeChange = (
 
   const handleDeleteConfirm = async () => {
     if (assignmentToDelete) {
+      setIsDeleting(true);
       setAssignments(assignments.filter(a => a.id !== assignmentToDelete.id));
-      await deleteAssignment(assignmentToDelete.id);
-      toast.success("Assignment deleted successfully");
+      try {
+        await deleteAssignment(assignmentToDelete.id);
+        toast.success("Assignment deleted successfully");
+      } catch (error) {
+        toast.error(error?.message || "Failed to delete assignment");
+      } finally {
+        setIsDeleting(false);
+      }
     }
     setIsDeleteDialogOpen(false);
     setAssignmentToDelete(null);
@@ -757,7 +776,9 @@ const handleAssignmentTypeChange = (
                               size="sm"
                               className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => handleDeleteClick(assignment)}
-                            >
+                              >
+
+
                               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                               Delete
                             </Button>
@@ -816,8 +837,10 @@ const handleAssignmentTypeChange = (
                 <Button
                   onClick={handleCreateAssignment}
                   className="flex-1 bg-gradient-primary hover:shadow-glow"
+                  disabled={isAdding}
                 >
-                  Add Assignment
+                  {isAdding && <ButtonLoader />}
+                  {isAdding ? "Creating..." : "Create Assignment"}
                 </Button>
               )}
             </div>
@@ -868,8 +891,10 @@ const handleAssignmentTypeChange = (
                 <Button
                   onClick={handleUpdateAssignment}
                   className="flex-1 bg-gradient-primary hover:shadow-glow"
+                  disabled={isUpdating}
                 >
-                  Update Assignment
+                  {isUpdating && <ButtonLoader />}
+                  {isUpdating ? "Updating..." : "Update Assignment"}
                 </Button>
               )}
             </div>
@@ -891,8 +916,10 @@ const handleAssignmentTypeChange = (
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting && <ButtonLoader />}
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

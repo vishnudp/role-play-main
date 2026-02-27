@@ -25,6 +25,7 @@ import { getOrganizationName, getUserName, formatToLongDate, formatFileSize, han
 import { API_BASE_URL } from '../config/apiConfig';
 import { PERMISSIONS } from '@/constants/permissions';
 import { usePermission } from '@/hooks/usePermission';
+import ButtonLoader from "@/components/ui/buttonLoader";
 interface Certification {
   id: string;
   name: string;
@@ -53,25 +54,25 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
   const [rolePlaySearchQuery, setRolePlaySearchQuery] = useState("");
   const [iconSearchQuery, setIconSearchQuery] = useState("");
 
-const toggleOrganization = (id: number) => {
-  const idStr = id.toString();
+  const toggleOrganization = (id: number) => {
+    const idStr = id.toString();
 
-  if (formData.organization_ids.includes(idStr)) {
-    // unselect
-    setFormData({
-      ...formData,
-      organization_ids: [],
-      role_play_ids: [], // reset roleplays when org removed
-    });
-  } else {
-    // replace with single value (still array)
-    setFormData({
-      ...formData,
-      organization_ids: [idStr],
-      role_play_ids: [], // reset roleplays when org changes
-    });
-  }
-};
+    if (formData.organization_ids.includes(idStr)) {
+      // unselect
+      setFormData({
+        ...formData,
+        organization_ids: [],
+        role_play_ids: [], // reset roleplays when org removed
+      });
+    } else {
+      // replace with single value (still array)
+      setFormData({
+        ...formData,
+        organization_ids: [idStr],
+        role_play_ids: [], // reset roleplays when org changes
+      });
+    }
+  };
 
   const toggleRolePlay = (id: number) => {
     const idStr = id.toString();
@@ -129,17 +130,17 @@ const toggleOrganization = (id: number) => {
     org.name.toLowerCase().includes(orgSearchQuery.toLowerCase())
   );
 
- const selectedOrgId = formData.organization_ids[0];
+  const selectedOrgId = formData.organization_ids[0];
 
-const filteredRolePlays = allRoleplays
-  .filter((rp) => {
-    // match organization first
-    if (!selectedOrgId) return false;
-    return rp.organization_id?.toString() === selectedOrgId;
-  })
-  .filter((rp) =>
-    rp.name.toLowerCase().includes(rolePlaySearchQuery.toLowerCase())
-  );
+  const filteredRolePlays = allRoleplays
+    .filter((rp) => {
+      // match organization first
+      if (!selectedOrgId) return false;
+      return rp.organization_id?.toString() === selectedOrgId;
+    })
+    .filter((rp) =>
+      rp.name.toLowerCase().includes(rolePlaySearchQuery.toLowerCase())
+    );
 
   const filteredIcons = icons.filter((icon) =>
     icon.avatar_name.toLowerCase().includes(iconSearchQuery.toLowerCase())
@@ -496,7 +497,7 @@ const filteredRolePlays = allRoleplays
 };
 
 const Certifications = () => {
-   const { can } = usePermission();
+  const { can } = usePermission();
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [selectedCertification, setSelectedCertification] = useState<Certification | null>(null);
@@ -508,6 +509,9 @@ const Certifications = () => {
   const [loading, setLoading] = useState(true);
   const [allRoleplays, setAllRolePlays] = useState<any[]>([]);
   const [icons, setIcons] = useState<any[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -516,19 +520,19 @@ const Certifications = () => {
         await fetchCertificate()
           .then((certs) => setCertifications(Array.isArray(certs) ? certs : []))
           .catch(() => setCertifications([]));
-        await fetchOrganizations()
+         fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
-        await fetchDocuments()
+         fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
-        await fetchRolePlays()
+        fetchRolePlays()
           .then((rolePlays) => setAllRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
           .catch(() => setAllRolePlays([]));
-        await fetchUsers()
+         fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
-        await fetchAvatarConfigurations()
+         fetchAvatarConfigurations()
           .then((icons) => setIcons(Array.isArray(icons) ? icons : []))
           .catch(() => setIcons([]));
       } finally {
@@ -640,6 +644,7 @@ const Certifications = () => {
     };
 
     try {
+      setIsAdding(true);
       const res = await createCertificate(payload); // <-- your API
       toast.success("Certification created");
 
@@ -647,8 +652,10 @@ const Certifications = () => {
 
       setIsCreateSheetOpen(false);
       resetForm();
-    } catch (err) {
-      toast.error("Failed to create certification");
+    } catch (error) {
+      toast.error(error?.message || "Failed to create certification");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -695,6 +702,7 @@ const Certifications = () => {
     };
 
     try {
+      setIsUpdating(true);
       const res = await updateCertificateApi(selectedCertification.id, payload);
 
       setCertifications(prev =>
@@ -704,9 +712,9 @@ const Certifications = () => {
       toast.success("Certification updated");
       setIsEditSheetOpen(false);
       resetForm();
-    } catch {
-      toast.error("Update failed");
-    }
+    } catch (error) {
+      toast.error(error?.message || "Update failed");
+    } finally {   setIsUpdating(false); }
   };
 
   const handleDeleteClick = (cert: Certification) => {
@@ -718,6 +726,7 @@ const Certifications = () => {
     if (!certToDelete) return;
 
     try {
+      setIsDeleting(true);
       await deleteCertificate(certToDelete.id);
 
       setCertifications(prev =>
@@ -725,8 +734,10 @@ const Certifications = () => {
       );
 
       toast.success("Deleted successfully");
-    } catch {
-      toast.error("Delete failed");
+    } catch (error) {
+      toast.error(error?.message || "Delete failed");
+    } finally {
+      setIsDeleting(false);
     }
 
     setIsDeleteDialogOpen(false);
@@ -744,13 +755,13 @@ const Certifications = () => {
             <p className="text-muted-foreground mt-2">Manage certifications and their requirements</p>
           </div>
           {can(PERMISSIONS.CERTIFICATION_CREATE) && (
-          <Button
-            onClick={() => { resetForm(); setIsCreateSheetOpen(true); }}
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Certifications
-          </Button>
+            <Button
+              onClick={() => { resetForm(); setIsCreateSheetOpen(true); }}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Certifications
+            </Button>
           )}
         </div>
 
@@ -787,52 +798,52 @@ const Certifications = () => {
                 </TableHeader>
                 <TableBody>
                   {
-                  certifications.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                                    <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                                    <p>No certification found</p>
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                  certifications.map((cert) => (
-                    <TableRow key={cert.id} className="border-border/50 hover:bg-muted/30">
-                      <TableCell className="font-medium">{cert.name}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {cert.organizations.map((org, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">{org?.organization?.name}</Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {cert.rolePlays.map((rp, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">{rp?.rolePlay?.name}</Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{cert.min_score}/10</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          {can(PERMISSIONS.CERTIFICATION_UPDATE) && (
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditClick(cert)}>
-                            <Edit className="h-3.5 w-3.5 mr-1.5" />
-                            Edit
-                          </Button>
-                          )}
-                          {can(PERMISSIONS.CERTIFICATION_DELETE) && (
-                          <Button variant="outline" size="sm" className="h-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(cert)}>
-                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                            Delete
-                          </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )))}
+                    certifications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No certification found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      certifications.map((cert) => (
+                        <TableRow key={cert.id} className="border-border/50 hover:bg-muted/30">
+                          <TableCell className="font-medium">{cert.name}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {cert.organizations.map((org, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{org?.organization?.name}</Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {cert.rolePlays.map((rp, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{rp?.rolePlay?.name}</Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{cert.min_score}/10</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              {can(PERMISSIONS.CERTIFICATION_UPDATE) && (
+                                <Button variant="outline" size="sm" className="h-8" onClick={() => handleEditClick(cert)}>
+                                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                  Edit
+                                </Button>
+                              )}
+                              {can(PERMISSIONS.CERTIFICATION_DELETE) && (
+                                <Button variant="outline" size="sm" className="h-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(cert)}>
+                                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )))}
                 </TableBody>
               </Table>
             }
@@ -859,7 +870,10 @@ const Certifications = () => {
               <div className="flex gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setIsCreateSheetOpen(false)}>Cancel</Button>
                 {can(PERMISSIONS.CERTIFICATION_CREATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleCreate}>Create Certification</Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleCreate} disabled={isAdding}>
+                    {isAdding && <ButtonLoader />}
+                    {isAdding ? "Creating..." : "Create Certification"}
+                    </Button>
                 )}
               </div>
             </SheetFooter>
@@ -882,7 +896,10 @@ const Certifications = () => {
               <div className="flex gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setIsEditSheetOpen(false)}>Cancel</Button>
                 {can(PERMISSIONS.CERTIFICATION_UPDATE) && (
-                <Button className="flex-1 bg-gradient-primary" onClick={handleUpdate}>Update Certification</Button>
+                  <Button className="flex-1 bg-gradient-primary" onClick={handleUpdate} disabled={isUpdating}>
+                    {isUpdating && <ButtonLoader />}
+                    {isUpdating ? "Updating..." : "Update Certification"}
+                  </Button>
                 )}
               </div>
             </SheetFooter>
@@ -900,11 +917,12 @@ const Certifications = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                {can(PERMISSIONS.CERTIFICATION_DELETE) && (
-              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Delete
-              </AlertDialogAction>
-                )}
+              {can(PERMISSIONS.CERTIFICATION_DELETE) && (
+                <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isDeleting}>
+                  {isDeleting && <ButtonLoader />}
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
