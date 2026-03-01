@@ -75,14 +75,15 @@ const Roles = () => {
     async function loadData() {
       setLoading(true);
       try {
-         fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
-          .catch(() => setOrganizations(getLoginUserOrganization()));
-        await fetchRoles()
+         await fetchRoles()
           .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
           .catch(() => setRoles([]));
+         await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
+       
 
-         fetchMetaData()
+           await fetchMetaData()
           .then((meta) => {
             console.log("META RESPONSE:", meta); // 👈 add this
             setMetaData(meta);
@@ -184,6 +185,15 @@ const Roles = () => {
     const roleName = (document.getElementById("role-name") as HTMLInputElement)?.value;
 
     if (!roleName) return toast.error("Role name is required");
+    if (!selectedOrgId || selectedOrgId === 'all') {
+      toast.error("Organization Name is required");
+      return;
+    }
+     if (!getSelectedPermissionKeys().length) {
+      toast.error("At least one permission is required");
+      return;
+    }
+
 
     const payload = {
       name: roleName,
@@ -216,6 +226,14 @@ const Roles = () => {
     const roleName = (document.getElementById("edit-role-name") as HTMLInputElement)?.value;
 
     if (!roleName) return toast.error("Role name is required");
+    if (!selectedOrgId || selectedOrgId === 'all') {
+      toast.error("Organization Name is required");
+      return;
+    }
+     if (!getSelectedPermissionKeys().length) {
+      toast.error("At least one permission is required");
+      return;
+    }
 
     const payload = {
       name: roleName,
@@ -662,7 +680,7 @@ const Roles = () => {
                   {/* Basic Information */}
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="role-name">Role Name *</Label>
+                      <Label htmlFor="role-name">Role Name <span className="text-destructive">*</span></Label>
                       <Input id="role-name" placeholder="Enter role name" required />
                     </div>
                     {/* Description */}
@@ -677,7 +695,7 @@ const Roles = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="organization">Organization *</Label>
+                      <Label htmlFor="organization">Organization <span className="text-destructive">*</span></Label>
                       <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
                         <SelectTrigger id="organization">
                           <SelectValue placeholder="Select organization" />
@@ -749,7 +767,7 @@ const Roles = () => {
                     {/* Basic Information */}
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-role-name">Role Name *</Label>
+                        <Label htmlFor="edit-role-name">Role Name <span className="text-destructive">*</span></Label>
                         <Input id="edit-role-name" defaultValue={selectedRole.name} required />
                       </div>
                       {/* Description */}
@@ -764,7 +782,7 @@ const Roles = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="edit-organization">Organization * </Label>
+                        <Label htmlFor="edit-organization">Organization <span className="text-destructive">*</span> </Label>
                         <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
                           <SelectTrigger id="edit-organization">
                             <SelectValue placeholder="Select organization" />

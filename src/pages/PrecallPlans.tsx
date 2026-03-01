@@ -110,10 +110,6 @@ const PrecallPlans = () => {
       setLoading(true);
 
       try {
-        fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
-          .catch(() => setOrganizations(getLoginUserOrganization()));
-
         await fetchPreCallPlans()
           .then((res) => {
             if (Array.isArray(res)) {
@@ -123,6 +119,11 @@ const PrecallPlans = () => {
             }
           })
           .catch(() => setPlans([]));
+        await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
+
+
       } finally {
         setLoading(false);
       }
@@ -133,7 +134,10 @@ const PrecallPlans = () => {
   const handleCreatePlan = async () => {
 
 
-    if (!addPlanName || !addOrgId) return;
+    if (!addPlanName || !addOrgId) {
+      toast.error("Please fill in required fields");
+      return;
+    }
     try {
       setIsAdding(true);
       await addPreCallPlans({
@@ -185,7 +189,10 @@ const PrecallPlans = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (!selectedPlan || !editPlanName || !editOrgId) return;
+    if (!selectedPlan || !editPlanName || !editOrgId) {
+      toast.error("Please fill in required fields");
+      return;
+    }
 
     try {
       setIsUpdating(true);
@@ -274,38 +281,48 @@ const PrecallPlans = () => {
   };
 
 
-  const handleEditQuestion = async () => {
-    if (!selectedPlan || !editingQuestion) return;
+ const handleEditQuestion = async () => {
+  if (!selectedPlan || !editingQuestion) return;
 
-    try {
-      setIsUpdatingQuestion(true);
+  if (
+    !editingQuestion.question.trim() ||
+    !editingQuestion.answer.trim() ||
+    !editingQuestion.question_type
+  ) {
+    toast.error("Please fill all required fields");
+    return;
+  }
 
-      const payload = {
-        question: editingQuestion.question,
-        answer: editingQuestion.answer,
-        hint: editingQuestion.hint,
-        question_type: editingQuestion.question_type,
-      };
+  try {
+    setIsUpdatingQuestion(true);
 
-      await editPreCallPlansQuestions(
-        payload,
-        selectedPlan.id,
-        editingQuestion.id
-      );
+    const payload = {
+      question: editingQuestion.question,
+      answer: editingQuestion.answer,
+      hint: editingQuestion.hint,
+      question_type: editingQuestion.question_type,
+    };
 
-      toast.success("Question updated successfully!");
+    await editPreCallPlansQuestions(
+      payload,
+      selectedPlan.id,
+      editingQuestion.id
+    );
 
-      const res = await fetchPreCallPlans();
-      setQuestions(Array.isArray(res) ? res : []);
+    const refreshedPlans = await fetchPreCallPlans();
+    setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
 
-      setEditingQuestion(null);
+    toast.success("Question updated successfully!");
 
-    } catch (error) {
-      toast.error(error?.message || "Failed to update question.");
-    } finally {
-      setIsUpdatingQuestion(false);
-    }
-  };
+    setEditingQuestion(null);
+    setIsQuestionsSheetOpen(false);
+
+  } catch (error) {
+    toast.error(error?.message || "Failed to update question.");
+  } finally {
+    setIsUpdatingQuestion(false);
+  }
+};
 
 
 
@@ -350,44 +367,46 @@ const PrecallPlans = () => {
 
 
 
-  const handleSaveQuestions = async () => {
-    if (!selectedPlan) return;
+const handleSaveQuestions = async () => {
+  if (!selectedPlan) return;
 
-    try {
-      setIsSavingQuestions(true);
-      // Loop through all questions and call API
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
+  try {
+    setIsSavingQuestions(true);
 
-        const payload = {
-          question_number: i + 1,
-          question: q.question,
-          question_type: q.question_type.replace(/\s/g, "_"), // e.g., "Open-ended" → "Open_ended"
-          answer: q.answer,
-          hint: q.hint || "",
-        };
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
 
-        // Decide whether to add or edit based on ID (temporary IDs are > 1e12)
-        if (q.id < 1_000_000_000_000) {
-          await editPreCallPlansQuestions(payload, selectedPlan.id, editingQuestion.id);
-        } else {
-          await addPreCallPlansQuestions(payload, selectedPlan.id);
-        }
+      const payload = {
+        question_number: i + 1,
+        question: q.question,
+        question_type: q.question_type.replace(/\s/g, "_"),
+        answer: q.answer,
+        hint: q.hint || "",
+      };
+
+      // ✅ If existing question (real DB id)
+      if (!q.isNew) {
+        await editPreCallPlansQuestions(payload, selectedPlan.id, q.id);
+      } 
+      // ✅ If new question
+      else {
+        await addPreCallPlansQuestions(payload, selectedPlan.id);
       }
-
-      // Refresh plans list
-      const refreshedPlans = await fetchPreCallPlans();
-      setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
-
-      setIsQuestionsSheetOpen(false);
-      setSelectedPlan(null);
-      toast.success("All questions saved successfully!");
-    } catch (error) {
-      toast.error(error?.message || "Failed to save questions.");
-    } finally {
-      setIsSavingQuestions(false);
     }
-  };
+
+    const refreshedPlans = await fetchPreCallPlans();
+    setPlans(Array.isArray(refreshedPlans) ? refreshedPlans : []);
+
+    toast.success("All questions saved successfully!");
+    setIsQuestionsSheetOpen(false);
+    setSelectedPlan(null);
+
+  } catch (error) {
+    toast.error(error?.message || "Failed to save questions.");
+  } finally {
+    setIsSavingQuestions(false);
+  }
+};
 
 
   const handleOpenAddSheet = () => {
@@ -565,13 +584,13 @@ const PrecallPlans = () => {
                 <div className="space-y-6 py-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="plan-name">Plan Name *</Label>
+                      <Label htmlFor="plan-name">Plan Name <span className="text-destructive">*</span></Label>
                       <Input id="plan-name" placeholder="Enter plan name" required value={addPlanName}               // <-- bind to state
                         onChange={(e) => setAddPlanName(e.target.value)} />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="organization">Organization *</Label>
+                      <Label htmlFor="organization">Organization <span className="text-destructive">*</span></Label>
                       <Select
                         value={addOrgId}                  // <-- bind to state
                         onValueChange={(value) => setAddOrgId(value)} // <-- update state
@@ -638,7 +657,7 @@ const PrecallPlans = () => {
                 <div className="space-y-6 py-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-plan-name">Plan Name *</Label>
+                      <Label htmlFor="edit-plan-name">Plan Name <span className="text-destructive">*</span></Label>
                       <Input
                         id="edit-plan-name"
                         placeholder="Enter plan name"
@@ -648,7 +667,7 @@ const PrecallPlans = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="edit-organization">Organization *</Label>
+                      <Label htmlFor="edit-organization">Organization <span className="text-destructive">*</span></Label>
                       <Select value={editOrgId} onValueChange={setEditOrgId}>
                         <SelectTrigger id="edit-organization">
                           <SelectValue placeholder="Select organization" />
@@ -777,7 +796,7 @@ const PrecallPlans = () => {
                       <p className="text-sm font-medium text-muted-foreground">Add New Question</p>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2 space-y-2">
-                          <Label>Question *</Label>
+                          <Label>Question <span className="text-destructive">*</span></Label>
                           <Input
                             placeholder="Enter your question"
                             value={newQuestion.question}
@@ -785,7 +804,7 @@ const PrecallPlans = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Question Type</Label>
+                          <Label>Question Type <span className="text-destructive">*</span></Label>
                           <Select
                             value={newQuestion.question_type}
                             onValueChange={(value) => setNewQuestion({ ...newQuestion, question_type: value })}
@@ -803,7 +822,7 @@ const PrecallPlans = () => {
                           </Select>
                         </div>
                         <div className="col-span-2 space-y-2">
-                          <Label>Answer / Expected Response *</Label>
+                          <Label>Answer / Expected Response <span className="text-destructive">*</span></Label>
                           <Textarea
                             placeholder="Enter the expected answer or response guidelines"
                             value={newQuestion.answer}
@@ -874,44 +893,59 @@ const PrecallPlans = () => {
 
               {/* Question Form */}
               <div className="space-y-4">
-                <Input
-                  placeholder="Question"
-                  value={editingQuestion.question}
-                  onChange={(e) =>
-                    setEditingQuestion({ ...editingQuestion, question: e.target.value })
-                  }
-                />
-                <Select
-                  value={editingQuestion.question_type}
-                  onValueChange={(value) =>
-                    setEditingQuestion({ ...editingQuestion, question_type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {questionTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Textarea
-                  placeholder="Answer"
-                  value={editingQuestion.answer}
-                  onChange={(e) =>
-                    setEditingQuestion({ ...editingQuestion, answer: e.target.value })
-                  }
-                />
-                <Input
-                  placeholder="Hint"
-                  value={editingQuestion.hint}
-                  onChange={(e) =>
-                    setEditingQuestion({ ...editingQuestion, hint: e.target.value })
-                  }
-                />
+                <div className="col-span-2 space-y-2">
+                  <Label>Question <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="Question"
+                    value={editingQuestion.question}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, question: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label>Question Type <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={editingQuestion.question_type}
+                    onValueChange={(value) =>
+                      setEditingQuestion({ ...editingQuestion, question_type: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {questionTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label>Answer / Expected Response <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    placeholder="Answer"
+                    value={editingQuestion.answer}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, answer: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label className="flex items-center gap-1">
+                    <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                    Hint / Suggestion
+                  </Label>
+                  <Input
+                    placeholder="Hint"
+                    value={editingQuestion.hint}
+                    onChange={(e) =>
+                      setEditingQuestion({ ...editingQuestion, hint: e.target.value })
+                    }
+                  />
+                </div>
               </div>
 
               {/* Save / Cancel buttons */}

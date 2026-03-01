@@ -35,23 +35,20 @@ interface User {
   id: string;
   name: string;
   email: string;
-  organization: string;
-  role: {
-    "id": string,
-    "name": string,
-    "key": string,
-    "description": string,
-    "is_system": string,
-    "parent_id": string,
-    "created_at": string,
-    "updated_at": string,
-    "created_by": string | null,
-    "updated_by": string | null
-  };
+  parent_id: string | null;
+  parent: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  role_id: string;
+  role_type: "ADMIN" | "MOBILE";
   is_active: boolean;
-  userType: "Admin" | "Mobile";
-  password?: string;
-  loginUsername?: string;
+  role: {
+    id: string;
+    name: string;
+    key: string;
+  };
 }
 
 const UsersPage = () => {
@@ -104,21 +101,22 @@ const UsersPage = () => {
     async function loadData() {
       setLoading(true);
       try {
-         fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
-          .catch(() => setOrganizations(getLoginUserOrganization()));
-         fetchDocuments()
-          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
-          .catch(() => setDocuments([]));
-         fetchRoles()
-          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
-          .catch(() => setRoles([]));
-         fetchRolePlays()
-          .then((rolePlays) => setRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
-          .catch(() => setRolePlays([]));
         await fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
+         await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
+         await fetchDocuments()
+          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
+          .catch(() => setDocuments([]));
+         await fetchRoles()
+          .then((roles) => setRoles(Array.isArray(roles) ? roles : []))
+          .catch(() => setRoles([]));
+        await fetchRolePlays()
+          .then((rolePlays) => setRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
+          .catch(() => setRolePlays([]));
+        
       } finally {
         setLoading(false);
       }
@@ -147,7 +145,7 @@ const UsersPage = () => {
   });
 
   const handleAddUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.role || !newUser.userType) {
+    if (!newUser.name || !newUser.email || !newUser.role || !newUser.userType || !newUser.organization) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -196,7 +194,7 @@ const UsersPage = () => {
   const handleEditUser = async () => {
     if (!selectedUser) return;
 
-    if (!editUser.name || !editUser.email || !editUser.role || !editUser.userType) {
+    if (!editUser.name || !editUser.email || !editUser.role || !editUser.userType || !editUser.organization) {
       toast.error("Please fill in required fields");
       return;
     }
@@ -252,19 +250,20 @@ const UsersPage = () => {
   };
 
   const openEditSheet = (user: User) => {
-    setSelectedUser(user);
-    setEditUser({
-      name: user.name,
-      email: user.email,
-      organization: user.organization_id || "",
-      role: user.role_id || "",
-      status: user.is_active ? "Active" : "Inactive",
-      userType: user.role_type === "ADMIN" ? "Admin" : "Mobile",
-      loginUsername: user.email || "",  // ✅ map email
-      password: "" // ✅ NEVER populate hashed password
-    });
-    setIsEditSheetOpen(true);
-  };
+  setSelectedUser(user);
+  console.log("Selected user for editing:", searchQuery);
+  setEditUser({
+    name: user.name,
+    email: user.email,
+    organization: user.parent_id || "",
+    role: user.role_id || "",
+    status: user.is_active ? "Active" : "Inactive",
+    userType: user.role_type === "ADMIN" ? "Admin" : "Mobile",
+    loginUsername: user.email || "",
+    password: ""
+  });
+  setIsEditSheetOpen(true);
+};
 
   const getRoleBadgeVariant = (role: string) => {
     if (role === "Super Admin" || role === "Org Admin") return "default";
@@ -350,8 +349,15 @@ const UsersPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="relative md:col-span-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search users by name, email, or organization..." className="pl-10 h-11 bg-background border-border/50"
-                  value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                <Input
+  type="text"
+  name="user-search-field"
+  autoComplete="new-password"
+  placeholder="Search users by name, email, or organization..."
+  className="pl-10 h-11 bg-background border-border/50"
+  value={searchQuery}
+  onChange={(e) => setSearchQuery(e.target.value)}
+/>
               </div>
               <Select value={filterOrganization} onValueChange={setFilterOrganization}>
                 <SelectTrigger className="h-11 bg-background border-border/50">
@@ -540,7 +546,7 @@ const UsersPage = () => {
           </SheetHeader>
           <div className="flex-1 overflow-y-auto space-y-6 py-6">
             <div className="space-y-2">
-              <Label htmlFor="add-userType">User Type *</Label>
+              <Label htmlFor="add-userType">User Type <span className="text-destructive">*</span></Label>
               <Select
                 value={newUser.userType}
                 onValueChange={(value) => setNewUser({ ...newUser, userType: value as "Admin" | "Mobile", password: "", loginUsername: "" })}
@@ -555,7 +561,7 @@ const UsersPage = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="add-name">Full Name *</Label>
+              <Label htmlFor="add-name">Full Name <span className="text-destructive">*</span></Label>
               <Input
                 id="add-name"
                 placeholder="Enter full name"
@@ -564,17 +570,19 @@ const UsersPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="add-email">Email Address *</Label>
+              <Label htmlFor="add-email">Email Address <span className="text-destructive">*</span></Label>
               <Input
                 id="add-email"
+                name="email-field"
                 type="email"
+                autoComplete="new-email"
                 placeholder="Enter email address"
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="add-organization">Organization *</Label>
+              <Label htmlFor="add-organization">Organization <span className="text-destructive">*</span></Label>
               <Select
                 value={newUser.organization}
                 onValueChange={(value) => setNewUser({ ...newUser, organization: value })}
@@ -590,7 +598,7 @@ const UsersPage = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="add-role">Role *</Label>
+              <Label htmlFor="add-role">Role <span className="text-destructive">*</span></Label>
               <Select
                 value={newUser.role}
                 onValueChange={(value) => setNewUser({ ...newUser, role: value })}
@@ -620,20 +628,24 @@ const UsersPage = () => {
             {newUser.userType === "Mobile" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="add-loginUsername">Login Username *</Label>
+                  <Label htmlFor="add-loginUsername">Login Username <span className="text-destructive">*</span></Label>
                   <Input
+                  name="loginUsername-field"
                     id="add-loginUsername"
                     placeholder="Enter login username"
+                    autoComplete="off"
                     value={newUser.loginUsername}
                     onChange={(e) => setNewUser({ ...newUser, loginUsername: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="add-mobile-password">Password *</Label>
+                  <Label htmlFor="add-mobile-password">Password <span className="text-destructive">*</span></Label>
                   <Input
+                  name="login-password-field"
                     id="add-mobile-password"
                     type="password"
                     placeholder="Enter password"
+                    autoComplete="new-password"
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   />
@@ -672,7 +684,7 @@ const UsersPage = () => {
           </SheetHeader>
           <div className="flex-1 overflow-y-auto space-y-6 py-6">
             <div className="space-y-2">
-              <Label htmlFor="edit-userType">User Type *</Label>
+              <Label htmlFor="edit-userType">User Type <span className="text-destructive">*</span></Label>
               <Select
                 value={editUser.userType}
                 onValueChange={(value) => setEditUser({ ...editUser, userType: value as "Admin" | "Mobile", password: "", loginUsername: "" })}
@@ -687,7 +699,7 @@ const UsersPage = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Full Name *</Label>
+              <Label htmlFor="edit-name">Full Name <span className="text-destructive">*</span></Label>
               <Input
                 id="edit-name"
                 placeholder="Enter full name"
@@ -696,9 +708,11 @@ const UsersPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email Address *</Label>
+              <Label htmlFor="edit-email">Email Address <span className="text-destructive">*</span></Label>
               <Input
+              name="edit-email-field"
                 id="edit-email"
+                autoComplete="off"
                 type="email"
                 placeholder="Enter email address"
                 value={editUser.email}
@@ -706,7 +720,7 @@ const UsersPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-organization">Organization *</Label>
+              <Label htmlFor="edit-organization">Organization <span className="text-destructive">*</span></Label>
               <Select
                 value={editUser.organization}
                 onValueChange={(value) => setEditUser({ ...editUser, organization: value })}
@@ -722,7 +736,7 @@ const UsersPage = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Role *</Label>
+              <Label htmlFor="edit-role">Role <span className="text-destructive">*</span></Label>
               <Select
                 value={editUser.role}
                 onValueChange={(value) => setEditUser({ ...editUser, role: value })}
@@ -741,8 +755,10 @@ const UsersPage = () => {
               <div className="space-y-2">
                 <Label htmlFor="edit-password">Password *</Label>
                 <Input
+                name="edit-password-field"
                   id="edit-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Enter password"
                   value={editUser.password}
                   onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
@@ -752,20 +768,24 @@ const UsersPage = () => {
             {editUser.userType === "Mobile" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-loginUsername">Login Username *</Label>
+                  <Label htmlFor="edit-loginUsername">Login Username <span className="text-destructive">*</span></Label>
                   <Input
+                  name="edit-loginUsername-field"
                     id="edit-loginUsername"
+                    autoComplete="off"
                     placeholder="Enter login username"
                     value={editUser.loginUsername}
                     onChange={(e) => setEditUser({ ...editUser, loginUsername: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-mobile-password">Password *</Label>
+                  <Label htmlFor="edit-mobile-password">Password <span className="text-destructive">*</span></Label>
                   <Input
+                  name="edit-mobile-password-field"
                     id="edit-mobile-password"
                     type="password"
                     placeholder="Enter password"
+                    autoComplete="new-password"
                     value={editUser.password}
                     onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
                   />

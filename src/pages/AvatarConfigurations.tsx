@@ -77,25 +77,7 @@ const AvatarConfigurations = () => {
     async function loadData() {
       setLoading(true);
       try {
-        // Fetch organizations
-        let orgs = [];
-        try {
-          orgs = fetchOrganizations();
-          orgs = Array.isArray(orgs) ? orgs : getLoginUserOrganization();
-        } catch (err) {
-          orgs = getLoginUserOrganization();
-        }
-        setOrganizations(orgs);
-
-        // Fetch users
-        let usersList = [];
-        try {
-          usersList = fetchUsers();
-          usersList = Array.isArray(usersList) ? usersList : [];
-        } catch (err) {
-          usersList = [];
-        }
-        setUsers(usersList);
+        
 
         // Fetch avatar configurations
         let configs = [];
@@ -115,6 +97,26 @@ const AvatarConfigurations = () => {
           configs = [];
         }
         setAvatarConfigurations(configs);
+
+        // Fetch organizations
+        let orgs = [];
+        try {
+          orgs = await fetchOrganizations();
+          orgs = Array.isArray(orgs) ? orgs : getLoginUserOrganization();
+        } catch (err) {
+          orgs = getLoginUserOrganization();
+        }
+        setOrganizations(orgs);
+
+        // Fetch users
+        let usersList = [];
+        try {
+          usersList = await fetchUsers();
+          usersList = Array.isArray(usersList) ? usersList : [];
+        } catch (err) {
+          usersList = [];
+        }
+        setUsers(usersList);
       } finally {
         setLoading(false);
       }

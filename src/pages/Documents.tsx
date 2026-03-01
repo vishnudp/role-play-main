@@ -75,13 +75,15 @@ const Documents = () => {
     async function loadData() {
       setLoading(true);
       try {
+          await fetchDocuments()
+          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
+          .catch(() => setDocuments([]));
+          
         await fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
-        await fetchDocuments()
-          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
-          .catch(() => setDocuments([]));
-        fetchUsers()
+      
+        await fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
       } finally {

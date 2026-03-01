@@ -167,6 +167,7 @@ const Categories = () => {
       const newCategory = await addCategory({
         name: categoryForm.name,
         description: categoryForm.description,
+        is_active: categoryForm.status === "Active",
       });
       setCategories([...categories, { ...newCategory, children: [], is_active: "Active" }]);
       resetCategoryForm();
@@ -188,6 +189,7 @@ const Categories = () => {
       const updated = await editCategory(selectedCategory.id, {
         name: categoryForm.name,
         description: categoryForm.description,
+        is_active: categoryForm.status === "Active",
       });
       setCategories(categories.map(c => c.id === selectedCategory.id ? { ...c, ...updated } : c));
       resetCategoryForm();
@@ -207,11 +209,20 @@ const Categories = () => {
 
   const openEditCategorySheet = (category: Category) => {
     setSelectedCategory(category);
+
+    const normalizedStatus =
+      category.is_active === true || category.is_active === "1"
+        ? "Active"
+        : category.is_active === false || category.is_active === "0"
+          ? "Inactive"
+          : category.is_active; // fallback if already correct
+
     setCategoryForm({
       name: category.name,
       description: category.description,
-      is_active: category.is_active,
+      status: normalizedStatus as "Active" | "Inactive",
     });
+
     setIsEditMode(true);
     setIsCategorySheetOpen(true);
   };
@@ -226,6 +237,7 @@ const Categories = () => {
         name: subCategoryForm.name,
         description: subCategoryForm.description,
         parent_id: parentCategoryId,
+        is_active: subCategoryForm.status === "Active",
       });
 
       setCategories(categories.map(c =>
@@ -254,6 +266,8 @@ const Categories = () => {
       const updated = await editSubCategory(selectedSubCategory.id, {
         name: subCategoryForm.name,
         description: subCategoryForm.description,
+        parent_id: parentCategoryId,
+        is_active: subCategoryForm.status === "Active",
       });
 
       setCategories(categories.map(c =>
@@ -281,7 +295,7 @@ const Categories = () => {
   };
 
   const handleDeleteSubCategory = (categoryId: string, subCategoryId: string) => {
-    
+
     setCategories(categories.map(c =>
       c.id === categoryId
         ? { ...c, children: c.children.filter(sc => sc.id !== subCategoryId) }
@@ -296,7 +310,7 @@ const Categories = () => {
     setIsDeleteDialogOpen(false);
 
     try {
-      
+
       if (deleteTarget.type === "category") {
         setIsDeleting(true);
         await deleteCategory(deleteTarget.categoryId);
@@ -337,16 +351,25 @@ const Categories = () => {
 
 
   const openEditSubCategorySheet = (category: Category, subCategory: SubCategory) => {
-    setParentCategoryId(category.id);
-    setSelectedSubCategory(subCategory);
-    setSubCategoryForm({
-      name: subCategory.name,
-      description: subCategory.description,
-      is_active: subCategory.is_active,
-    });
-    setIsEditMode(true);
-    setIsSubCategorySheetOpen(true);
-  };
+  setParentCategoryId(category.id);
+  setSelectedSubCategory(subCategory);
+
+  const normalizedStatus =
+    subCategory.is_active === true || subCategory.is_active === "1"
+      ? "Active"
+      : subCategory.is_active === false || subCategory.is_active === "0"
+      ? "Inactive"
+      : subCategory.is_active;
+
+  setSubCategoryForm({
+    name: subCategory.name,
+    description: subCategory.description,
+    status: normalizedStatus as "Active" | "Inactive",
+  });
+
+  setIsEditMode(true);
+  setIsSubCategorySheetOpen(true);
+};
 
   const openAddSubCategorySheet = (categoryId: string) => {
     setParentCategoryId(categoryId);
@@ -496,7 +519,7 @@ const Categories = () => {
                               </TableCell>
                               <TableCell>
                                 <Badge variant="secondary" className="font-normal whitespace-nowrap">
-                                 <span> {category.children.length} subcategories</span>
+                                  <span> {category.children.length} subcategories</span>
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -632,7 +655,7 @@ const Categories = () => {
           </SheetHeader>
           <div className="flex-1 overflow-y-auto space-y-6 py-6">
             <div className="space-y-2">
-              <Label htmlFor="categoryName">Category Name *</Label>
+              <Label htmlFor="categoryName">Category Name <span className="text-destructive">*</span></Label>
               <Input
                 id="categoryName"
                 placeholder="Enter category name"
@@ -671,11 +694,19 @@ const Categories = () => {
               Cancel
             </Button>
             {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
-              <Button onClick={isEditMode ? handleEditCategory : handleAddCategory} disabled={isAdding || isUpdating}>
-                {isEditMode ? "Update Category" : "Add Category"}
+              <Button
+                onClick={isEditMode ? handleEditCategory : handleAddCategory}
+                disabled={isAdding || isUpdating}
+              >
+                {isEditMode
+                  ? isUpdating
+                    ? "Updating..."
+                    : "Update Category"
+                  : isAdding
+                    ? "Adding..."
+                    : "Add Category"}
+
                 {(isAdding || isUpdating) && <ButtonLoader className="ml-2" />}
-                {isAdding && "Adding..."}
-                {isUpdating && "Updating..."}
               </Button>
             )}
           </SheetFooter>
@@ -760,11 +791,21 @@ const Categories = () => {
               Cancel
             </Button>
             {can(isEditMode ? PERMISSIONS.CATEGORY_UPDATE : PERMISSIONS.CATEGORY_CREATE) && (
-              <Button onClick={isEditMode ? handleEditSubCategory : handleAddSubCategory} disabled={isAddingSubCategory || isUpdatingSubCategory}>
-                {isEditMode ? "Update Subcategory" : "Add Subcategory"}
-                {(isAddingSubCategory || isUpdatingSubCategory) && <ButtonLoader className="ml-2" />}
-                {isAddingSubCategory && "Adding..."}
-                {isUpdatingSubCategory && "Updating..."}
+              <Button
+                onClick={isEditMode ? handleEditSubCategory : handleAddSubCategory}
+                disabled={isAddingSubCategory || isUpdatingSubCategory}
+              >
+                {isEditMode
+                  ? isUpdatingSubCategory
+                    ? "Updating..."
+                    : "Update Subcategory"
+                  : isAddingSubCategory
+                    ? "Adding..."
+                    : "Add Subcategory"}
+
+                {(isAddingSubCategory || isUpdatingSubCategory) && (
+                  <ButtonLoader className="ml-2" />
+                )}
               </Button>
             )}
           </SheetFooter>
@@ -783,7 +824,7 @@ const Categories = () => {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
             {can(PERMISSIONS.CATEGORY_DELETE) && (
-              <Button variant="destructive" onClick={handleConfirmDelete}  disabled={isDeleting || isDeletingSubCategory}>
+              <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting || isDeletingSubCategory}>
                 {isDeleting && <ButtonLoader />}
                 {isDeleting || isDeletingSubCategory ? "Deleting..." : "Delete"}
               </Button>

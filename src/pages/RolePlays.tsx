@@ -83,6 +83,9 @@ interface RolePlaysFormProps {
   avatars: any[];
   guardrails: any[];
   filteredDocuments: any[];
+  errors: Record<string, string>;
+  setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  hasSubmitted: boolean
 }
 
 const RolePlaysForm = ({
@@ -112,6 +115,9 @@ const RolePlaysForm = ({
   avatars,
   guardrails,
   filteredDocuments,
+  errors,
+  setErrors,
+  hasSubmitted
 }: RolePlaysFormProps) => (
   <div className="space-y-6 py-6">
     {/* Organization */}
@@ -124,6 +130,7 @@ const RolePlaysForm = ({
         onValueChange={(value) => {
           setSelectedOrganization(value);
           setSelectedDocument("");
+          setErrors(prev => ({ ...prev, organization: "" }));
         }}
       >
         <SelectTrigger className="h-11 bg-background border-border/50">
@@ -137,6 +144,9 @@ const RolePlaysForm = ({
           ))}
         </SelectContent>
       </Select>
+      {hasSubmitted && errors.organization && (
+        <p className="text-sm text-destructive">{errors.organization}</p>
+      )}
     </div>
 
     {/* Roleplay Name */}
@@ -148,9 +158,15 @@ const RolePlaysForm = ({
         id="roleplayName"
         placeholder="Enter roleplay name"
         value={roleplayName}
-        onChange={(e) => setRoleplayName(e.target.value)}
+        onChange={(e) => {
+          setRoleplayName(e.target.value);
+          setErrors(prev => ({ ...prev, name: "" })); // clear only name error
+        }}
         className="h-11 bg-background border-border/50"
       />
+      {hasSubmitted && errors.name && (
+        <p className="text-sm text-destructive">{errors.name}</p>
+      )}
     </div>
 
     {/* Active Status */}
@@ -174,6 +190,7 @@ const RolePlaysForm = ({
         onValueChange={(value) => {
           setSelectedCategory(value);
           setSelectedSubcategory("");
+          setErrors(prev => ({ ...prev, category: "" }));
         }}
       >
         <SelectTrigger className="h-11 bg-background border-border/50">
@@ -187,6 +204,9 @@ const RolePlaysForm = ({
           ))}
         </SelectContent>
       </Select>
+      {hasSubmitted && errors.category && (
+        <p className="text-sm text-destructive">{errors.category}</p>
+      )}
     </div>
 
     {/* Subcategory */}
@@ -194,7 +214,10 @@ const RolePlaysForm = ({
       <Label htmlFor="subcategory">
         Subcategory <span className="text-destructive">*</span>
       </Label>
-      <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory} disabled={!selectedCategory}>
+      <Select value={selectedSubcategory} onValueChange={(value) => {
+        setSelectedSubcategory(value);
+        setErrors(prev => ({ ...prev, subcategory: "" }));
+      }} disabled={!selectedCategory}>
         <SelectTrigger className="h-11 bg-background border-border/50">
           <SelectValue placeholder={selectedCategory ? "Select subcategory" : "Select category first"} />
         </SelectTrigger>
@@ -206,6 +229,9 @@ const RolePlaysForm = ({
           ))}
         </SelectContent>
       </Select>
+      {hasSubmitted && errors.subcategory && (
+        <p className="text-sm text-destructive">{errors.subcategory}</p>
+      )}
     </div>
 
     {/* Pre-Call Plan */}
@@ -216,6 +242,7 @@ const RolePlaysForm = ({
       <Select value={selectedPreCallPlans}
         onValueChange={(value) => {
           setSelectedPreCallPlans(value);
+          setErrors(prev => ({ ...prev, preCallPlan: "" }));
         }}>
         <SelectTrigger className="h-11 bg-background border-border/50">
           <SelectValue placeholder="Select pre-call plan" />
@@ -228,6 +255,9 @@ const RolePlaysForm = ({
           ))}
         </SelectContent>
       </Select>
+      {hasSubmitted && errors.preCallPlan && (
+        <p className="text-sm text-destructive">{errors.preCallPlan}</p>
+      )}
     </div>
 
     {/* Avatar */}
@@ -238,6 +268,7 @@ const RolePlaysForm = ({
       <Select value={selectedAvatars}
         onValueChange={(value) => {
           setSelectedAvatars(value);
+          setErrors(prev => ({ ...prev, avatar: "" }));
         }}>
         <SelectTrigger className="h-11 bg-background border-border/50">
           <SelectValue placeholder="Select avatar" />
@@ -250,14 +281,18 @@ const RolePlaysForm = ({
           ))}
         </SelectContent>
       </Select>
+      {hasSubmitted && errors.avatar && (
+        <p className="text-sm text-destructive">{errors.avatar}</p>
+      )}
     </div>
 
     {/* Guardrails */}
     <div className="space-y-2">
-      <Label htmlFor="guardrails">Guardrails</Label>
+      <Label htmlFor="guardrails">Guardrails  <span className="text-destructive">*</span></Label>
       <Select value={selectedGuardrails}
         onValueChange={(value) => {
-          setSelectedGuardrails(value);
+          setSelectedGuardrails(value); 
+          setErrors(prev => ({ ...prev, guardrails: "" }));
         }}>
         <SelectTrigger className="h-11 bg-background border-border/50">
           <SelectValue placeholder="Select guardrails" />
@@ -270,6 +305,9 @@ const RolePlaysForm = ({
           ))}
         </SelectContent>
       </Select>
+      {hasSubmitted && errors.guardrails && (
+        <p className="text-sm text-destructive">{errors.guardrails}</p>
+      )}
     </div>
 
     {/* Documents */}
@@ -289,7 +327,10 @@ const RolePlaysForm = ({
       ) : (
         <Select
           value={selectedDocument}
-          onValueChange={setSelectedDocument}
+          onValueChange={(value) => {
+            setSelectedDocument(value);
+            setErrors(prev => ({ ...prev, document: "" }));
+          }}
         >
           <SelectTrigger className="h-11 bg-background border-border/50">
             <SelectValue placeholder="Select document" />
@@ -303,6 +344,9 @@ const RolePlaysForm = ({
             ))}
           </SelectContent>
         </Select>
+      )}
+      {hasSubmitted && errors.document && (
+        <p className="text-sm text-destructive">{errors.document}</p>
       )}
     </div>
 
@@ -339,6 +383,8 @@ const RolePlays = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   // Mock documents data
   // const documents: Document[] = [
@@ -444,6 +490,24 @@ const RolePlays = () => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!selectedOrganization) newErrors.organization = "Organization is required";
+    if (!roleplayName?.trim()) newErrors.name = "Roleplay name is required";
+    if (!selectedCategory) newErrors.category = "Category is required";
+    if (!selectedSubcategory) newErrors.subcategory = "Subcategory is required";
+    if (!selectedPreCallPlans) newErrors.preCallPlan = "Pre-call plan is required";
+
+    if (!selectedAvatars) newErrors.avatar = "Avatar is required";
+    if (!selectedDocument) newErrors.document = "Document is required";
+    if (!selectedGuardrails) newErrors.guardrails = "Guardrails is required";
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
   const filteredRoleplays = roleplays.filter((roleplay) => {
     const orgName = getOrganizationName(organizations, roleplay.organization_id) || "";
 
@@ -454,6 +518,8 @@ const RolePlays = () => {
   });
 
   const handleCreateRolePlay = async () => {
+    setHasSubmitted(true);
+    if (!validateForm()) return;
     try {
       setIsAdding(true);
       const payload = {
@@ -485,16 +551,24 @@ const RolePlays = () => {
       setSelectedGuardrails("");
       setIsActive(true);
       await loadRolePlays();
-
+      resetForm()
       // Reset form
 
 
     } catch (error) {
       toast.error(error?.message || "Failed to create roleplay");
     } finally {
+      setHasSubmitted(false);
       setIsAdding(false);
     }
 
+  };
+
+  const openCreateSheet = () => {
+    resetForm();
+    setErrors({});
+    setHasSubmitted(false);
+    setIsCreateSheetOpen(true);
   };
 
   const handleEditRolePlay = (roleplay: RolePlay) => {
@@ -509,13 +583,16 @@ const RolePlays = () => {
     setSelectedAvatars(roleplay.avatar_id);
     setSelectedGuardrails(roleplay.guardrail_id);
     setIsActive(roleplay.is_active);
+    // resetForm();
+    setErrors({});
+    setHasSubmitted(false);
 
     setIsEditSheetOpen(true);
   };
 
   const handleUpdateRolePlay = async () => {
-    console.log("Update clicked");
-    console.log("Selected Roleplay:", selectedRolePlay);
+    setHasSubmitted(true);
+    if (!validateForm()) return;
 
     try {
       if (!selectedRolePlay) {
@@ -550,15 +627,28 @@ const RolePlays = () => {
       setSelectedGuardrails("");
       toast.success("Roleplay updated successfully");
       await loadRolePlays();
-
-      await loadRolePlays();
+      resetForm()
     } catch (error) {
       console.error("Update error:", error);
       toast.error(error?.message || "Failed to update roleplay");
     } finally {
+      setHasSubmitted(false);
       setIsUpdating(false);
     }
 
+  };
+
+  const resetForm = () => {
+    setRoleplayName("");
+    setSelectedCategory("");
+    setSelectedSubcategory("");
+    setSelectedOrganization("");
+    setSelectedDocument("");
+    setSelectedPreCallPlans("");
+    setSelectedAvatars("");
+    setSelectedGuardrails("");
+    setIsActive(true);
+    setSelectedRolePlay(null);
   };
 
   const handleDeleteClick = (roleplay: RolePlay) => {
@@ -605,7 +695,7 @@ const RolePlays = () => {
           {can(PERMISSIONS.ROLEPLAY_CREATE) && (
             <Button
               className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-11 px-6"
-              onClick={() => setIsCreateSheetOpen(true)}
+              onClick={() => openCreateSheet()}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Roleplay
@@ -740,6 +830,10 @@ const RolePlays = () => {
               avatars={avatars}
               guardrails={guardrails}
               filteredDocuments={filteredDocuments}
+
+              errors={errors}
+              setErrors={setErrors}
+              hasSubmitted={hasSubmitted}
             />
 
           </div>
@@ -795,6 +889,9 @@ const RolePlays = () => {
               avatars={avatars}
               guardrails={guardrails}
               filteredDocuments={filteredDocuments}
+              errors={errors}
+              setErrors={setErrors}
+              hasSubmitted={hasSubmitted}
             />
 
           </div>

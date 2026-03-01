@@ -417,24 +417,25 @@ const Assignments = () => {
     async function loadData() {
       setLoading(true);
       try {
-         fetchOrganizations()
-          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
-          .catch(() => setOrganizations(getLoginUserOrganization()));
-         fetchDocuments()
-          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
-          .catch(() => setDocuments([]));
-         fetchRolePlays()
-          .then((rolePlays) => setRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
-          .catch(() => setRolePlays([]));
-         fetchUsers()
-          .then((users) => setUsers(Array.isArray(users) ? users : []))
-          .catch(() => setUsers([]));
-         fetchCertificate()
-          .then((certificates) => setCertificates(Array.isArray(certificates) ? certificates : []))
-          .catch(() => setCertificates([]));
         await fetchAssignment()
           .then((assignments) => setAssignments(Array.isArray(assignments) ? assignments : []))
           .catch(() => setAssignments([]));
+        await fetchOrganizations()
+          .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+          .catch(() => setOrganizations(getLoginUserOrganization()));
+         await fetchDocuments()
+          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
+          .catch(() => setDocuments([]));
+         await fetchRolePlays()
+          .then((rolePlays) => setRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
+          .catch(() => setRolePlays([]));
+         await fetchUsers()
+          .then((users) => setUsers(Array.isArray(users) ? users : []))
+          .catch(() => setUsers([]));
+        await fetchCertificate()
+          .then((certificates) => setCertificates(Array.isArray(certificates) ? certificates : []))
+          .catch(() => setCertificates([]));
+        
       } finally {
         setLoading(false);
       }

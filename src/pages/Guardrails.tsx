@@ -139,7 +139,7 @@ const GuardrailForm = ({
   <>
     <div className="flex-1 overflow-y-auto space-y-6 py-6">
       <div className="space-y-2">
-        <Label htmlFor="name">Guardrail Name *</Label>
+        <Label htmlFor="name">Guardrail Name <span className="text-destructive">*</span></Label>
         <Input
           id="name"
           placeholder="Enter guardrail name"
@@ -150,7 +150,7 @@ const GuardrailForm = ({
 
       {/* Multi-select Organizations */}
       <div className="space-y-2">
-        <Label>Select Organizations *</Label>
+        <Label>Select Organizations <span className="text-destructive">*</span></Label>
         <Popover open={isOrgsPopoverOpen} onOpenChange={setIsOrgsPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -236,7 +236,7 @@ const GuardrailForm = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="instructions">Instructions *</Label>
+        <Label htmlFor="instructions">Instructions <span className="text-destructive">*</span></Label>
         <Textarea
           id="instructions"
           placeholder="Enter guardrail instructions..."
@@ -401,10 +401,10 @@ const Guardrails = () => {
         const orgs =  await fetchOrganizations();
         setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization());
 
-        const docs =  fetchDocuments();
+        const docs =  await fetchDocuments();
         setDocuments(Array.isArray(docs) ? docs : []);
 
-        const users = fetchUsers();
+        const users = await fetchUsers();
         setUsers(Array.isArray(users) ? users : []);
       } catch (err) {
         console.error(err);

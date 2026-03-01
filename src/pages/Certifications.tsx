@@ -89,21 +89,23 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
     }
   };
 
-  const toggleIcon = (id: number) => {
-    const idStr = id.toString();
-    const current = formData.icon_ids || [];
-    if (current.includes(idStr)) {
-      setFormData({
-        ...formData,
-        icon_ids: current.filter((iconId) => iconId !== idStr),
-      });
-    } else {
-      setFormData({
-        ...formData,
-        icon_ids: [...current, idStr],
-      });
-    }
-  };
+const toggleIcon = (id: number) => {
+  const idStr = id.toString();
+
+  // If already selected → unselect
+  if (formData.icon_ids?.[0] === idStr) {
+    setFormData({
+      ...formData,
+      icon_ids: [],
+    });
+  } else {
+    // Always replace with single value (still array)
+    setFormData({
+      ...formData,
+      icon_ids: [idStr],
+    });
+  }
+};
 
   const removeOrganization = (id: string) => {
     setFormData({
@@ -168,7 +170,7 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
     <div className="space-y-6 py-6">
       {/* Organization */}
       <div className="space-y-2">
-        <Label>Organizations</Label>
+        <Label>Organizations <span className="text-destructive">*</span></Label>
         <Popover open={isOrgPopoverOpen} onOpenChange={setIsOrgPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -274,7 +276,7 @@ const CertificationForm = ({ formData, setFormData, organizations, allRoleplays,
 
       {/* Roleplays Multi-select */}
       <div className="space-y-2">
-        <Label>Roleplays</Label>
+        <Label>Roleplays <span className="text-destructive">*</span></Label>
         <Popover open={isRolePlayPopoverOpen} onOpenChange={setIsRolePlayPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -520,19 +522,19 @@ const Certifications = () => {
         await fetchCertificate()
           .then((certs) => setCertifications(Array.isArray(certs) ? certs : []))
           .catch(() => setCertifications([]));
-         fetchOrganizations()
+        await fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
-         fetchDocuments()
+        await fetchDocuments()
           .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
           .catch(() => setDocuments([]));
-        fetchRolePlays()
+        await fetchRolePlays()
           .then((rolePlays) => setAllRolePlays(Array.isArray(rolePlays) ? rolePlays : []))
           .catch(() => setAllRolePlays([]));
-         fetchUsers()
+         await fetchUsers()
           .then((users) => setUsers(Array.isArray(users) ? users : []))
           .catch(() => setUsers([]));
-         fetchIcons()
+         await fetchIcons()
           .then((icons) => setIcons(Array.isArray(icons) ? icons : []))
           .catch(() => setIcons([]));
       } finally {

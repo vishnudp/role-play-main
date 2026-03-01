@@ -89,12 +89,10 @@ const Organizations = () => {
         await fetchOrganizations()
           .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
           .catch(() => setOrganizations(getLoginUserOrganization()));
-         fetchDocuments()
-          .then((docs) => setDocuments(Array.isArray(docs) ? docs : []))
-          .catch(() => setDocuments([]));
-         fetchUsers()
-          .then((users) => setUsers(Array.isArray(users) ? users : []))
-          .catch(() => setUsers([]));
+
+        //  fetchUsers()
+        //   .then((users) => setUsers(Array.isArray(users) ? users : []))
+        //   .catch(() => setUsers([]));
       } finally {
         setLoading(false);
       }
@@ -102,49 +100,53 @@ const Organizations = () => {
     loadData();
   }, []);
 
-  // const organizations = [
-  //   {
-  //     id: 1,
-  //     name: "TechCorp Solutions",
-  //     logo: "https://api.dicebear.com/7.x/initials/svg?seed=TC",
-  //     ownerEmail: "john@techcorp.com",
-  //     primaryPhone: "+1 234 567 8900",
-  //     address: "123 Tech Street, San Francisco, CA 94102",
-  //     contactEmail: "contact@techcorp.com",
-  //     contactPhone: "+1 234 567 8901",
-  //     users: 156,
-  //     documents: 34,
-  //     status: "Active"
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "HealthPlus Medical",
-  //     logo: "https://api.dicebear.com/7.x/initials/svg?seed=HP",
-  //     ownerEmail: "sarah@healthplus.com",
-  //     primaryPhone: "+1 234 567 8902",
-  //     address: "456 Medical Ave, Boston, MA 02101",
-  //     contactEmail: "info@healthplus.com",
-  //     contactPhone: "+1 234 567 8903",
-  //     users: 89,
-  //     documents: 28,
-  //     status: "Active"
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "InnovateTech Inc",
-  //     logo: "https://api.dicebear.com/7.x/initials/svg?seed=IT",
-  //     ownerEmail: "michael@innovatetech.com",
-  //     primaryPhone: "+1 234 567 8904",
-  //     address: "789 Innovation Blvd, Austin, TX 78701",
-  //     contactEmail: "support@innovatetech.com",
-  //     contactPhone: "+1 234 567 8905",
-  //     users: 234,
-  //     documents: 52,
-  //     status: "Active"
-  //   },
-  // ];
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
 
   const handleCreateOrganization = async () => {
+    if (!formData.name.trim() && !formData.email.trim() && !formData.password.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    if (!formData.name.trim()) {
+      toast.error("Entity Name is required");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error("Login Email is required");
+      return;
+    }
+
+    if (!formData.password.trim()) {
+      toast.error("Password is required");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+
+    if (
+      !formData.contact_person_email.trim() &&
+      !isValidEmail(formData.contact_person_email)
+    ) {
+      toast.error("Please enter a valid Contact Person Email address");
+      return;
+    }
+    if (
+      formData.email &&
+      !isValidEmail(formData.email)
+    ) {
+      toast.error("Please enter a valid Email address");
+      return;
+    }
+
+
     try {
       setIsAdding(true);
       const payload = {
@@ -236,6 +238,45 @@ const Organizations = () => {
 
   const handleUpdateOrganization = async () => {
     if (!selectedOrg) return;
+
+    if (!formData.name.trim() && !formData.email.trim() && !formData.password.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      toast.error("Entity Name is required");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error("Login Email is required");
+      return;
+    }
+
+
+
+    if (formData.password && formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters long");
+      return;
+    }
+
+    if (
+      !formData.contact_person_email.trim() &&
+      !isValidEmail(formData.contact_person_email)
+    ) {
+      toast.error("Please enter a valid Contact Person Email address");
+      return;
+    }
+
+    if (
+      formData.email &&
+      !isValidEmail(formData.email)
+    ) {
+      toast.error("Please enter a valid Email address");
+      return;
+    }
+
 
     try {
       setIsUpdating(true);
@@ -404,9 +445,17 @@ const Organizations = () => {
                 </TableHeader>
                 <TableBody>
                   {
-                    organizations.length === 0 ? (
+                    organizations
+                      .filter((org) => {
+                        const query = searchQuery.toLowerCase();
+                        return (
+                          org?.name?.toLowerCase().includes(query) ||
+                          org?.email?.toLowerCase().includes(query) ||
+                          org?.phone?.toLowerCase().includes(query)
+                        );
+                      }).length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
                           <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
                           <p>No organizations found</p>
                         </TableCell>
@@ -515,7 +564,7 @@ const Organizations = () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="entity-name">Entity Name *</Label>
+                        <Label htmlFor="entity-name">Entity Name <span className="text-destructive">*</span></Label>
                         <Input id="entity-name" placeholder="Enter entity name" required value={formData.name}
                           onChange={(e) => handleInputChange("name", e.target.value)} />
                       </div>
@@ -538,13 +587,13 @@ const Organizations = () => {
                     <h3 className="text-lg font-semibold text-foreground">Organisation Login Credentials</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="login-email">Login Email *</Label>
+                        <Label htmlFor="login-email">Login Email <span className="text-destructive">*</span></Label>
                         <Input id="login-email" type="email" placeholder="login@example.com" required value={formData.email}
                           onChange={(e) => handleInputChange("email", e.target.value)}
                           autoComplete="off" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="login-password">Password *</Label>
+                        <Label htmlFor="login-password">Password <span className="text-destructive">*</span></Label>
                         <Input id="login-password" type="password" placeholder="Enter password" required value={formData.password}
                           onChange={(e) => handleInputChange("password", e.target.value)}
                           autoComplete="new-password" />
@@ -627,7 +676,7 @@ const Organizations = () => {
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-entity-name">Entity Name *</Label>
+                          <Label htmlFor="edit-entity-name">Entity Name <span className="text-destructive">*</span></Label>
                           <Input id="edit-entity-name" value={formData.name}
                             onChange={(e) => handleInputChange("name", e.target.value)} required />
                         </div>
@@ -649,7 +698,7 @@ const Organizations = () => {
                       <h3 className="text-lg font-semibold text-foreground">Organisation Login Credentials</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-login-email">Login Email *</Label>
+                          <Label htmlFor="edit-login-email">Login Email <span className="text-destructive">*</span></Label>
                           <Input id="edit-login-email" type="email" placeholder="login@example.com" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required
                             autoComplete="off" />
                         </div>
@@ -674,7 +723,7 @@ const Organizations = () => {
                             onChange={(e) => handleInputChange("contact_person_name", e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="edit-contact-email">Contact Email</Label>
+                          <Label htmlFor="edit-contact-email">Contact Email </Label>
                           <Input id="edit-contact-email" type="email" value={formData.contact_person_email}
                             onChange={(e) => handleInputChange("contact_person_email", e.target.value)} />
                         </div>
@@ -744,9 +793,9 @@ const Organizations = () => {
                   </div>
 
                   {/* <div>
-                    <Label>Phone</Label>
-                    <Input value={formData.phone} disabled />
-                  </div> */}
+                      <Label>Phone</Label>
+                      <Input value={formData.phone} disabled />
+                    </div> */}
 
                   <div>
                     <Label>Address</Label>

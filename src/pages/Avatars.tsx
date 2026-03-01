@@ -86,7 +86,7 @@ const AvatarFormContent = ({
     <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
       <Label className="flex items-center gap-2 text-sm font-semibold">
         <Building2 className="h-4 w-4 text-primary" />
-        Organization *
+        Organization <span className="text-destructive">*</span>
       </Label>
       <Select value={formData.organization} onValueChange={(value) => setFormData({ ...formData, organization: value })}>
         <SelectTrigger>
@@ -113,7 +113,7 @@ const AvatarFormContent = ({
       </div>
       <div className="p-4 space-y-4 bg-card/50">
         <div className="space-y-2">
-          <Label>Avatar Name *</Label>
+          <Label>Avatar Name <span className="text-destructive">*</span></Label>
           <Input
             placeholder="Enter avatar name"
             value={formData.name || ""}
@@ -121,7 +121,7 @@ const AvatarFormContent = ({
           />
         </div>
         <div className="space-y-2">
-          <Label>Avatar Description</Label>
+          <Label>Avatar Description <span className="text-destructive">*</span></Label>
           <Textarea
             placeholder="Describe this avatar's purpose"
             value={formData.description || ""}
@@ -129,7 +129,7 @@ const AvatarFormContent = ({
           />
         </div>
         <div className="space-y-2">
-          <Label>Persona</Label>
+          <Label>Persona <span className="text-destructive">*</span></Label>
           <Textarea
             placeholder="Define the avatar's persona and background"
             value={formData.persona || ""}
@@ -137,7 +137,7 @@ const AvatarFormContent = ({
           />
         </div>
         <div className="space-y-2">
-          <Label>Role</Label>
+          <Label>Role <span className="text-destructive">*</span></Label>
           <Input
             placeholder="e.g., Sales Representative, Support Agent"
             value={formData.role || ""}
@@ -159,7 +159,7 @@ const AvatarFormContent = ({
       </div>
       <div className="p-4 space-y-4 bg-card/50">
         <div className="space-y-2">
-          <Label>Select Avatars <span className="text-muted-foreground text-xs"></span></Label>
+          <Label>Select Avatars <span className="text-destructive">*</span></Label>
           <p className="text-xs text-muted-foreground mb-3">
             {(formData.selectedAvatarIds || []).length} avatar(s) selected
           </p>
@@ -206,7 +206,7 @@ const AvatarFormContent = ({
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Background</Label>
+          <Label>Background <span className="text-destructive">*</span></Label>
           <Select value={formData.background} onValueChange={(value) => setFormData({ ...formData, background: value })}>
             <SelectTrigger><SelectValue placeholder="Select background" /></SelectTrigger>
             <SelectContent>
@@ -229,7 +229,7 @@ const AvatarFormContent = ({
       </div>
       <div className="p-4 space-y-4 bg-card/50">
         <div className="space-y-2">
-          <Label>Personality</Label>
+          <Label>Personality <span className="text-destructive">*</span></Label>
           <Input
             placeholder="e.g., Assertive, Empathetic, Analytical"
             value={formData.personality || ""}
@@ -238,7 +238,7 @@ const AvatarFormContent = ({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Strictness</Label>
+            <Label>Strictness <span className="text-destructive">*</span></Label>
             <Select value={formData.strictness} onValueChange={(value) => setFormData({ ...formData, strictness: value })}>
               <SelectTrigger><SelectValue placeholder="Select strictness" /></SelectTrigger>
               <SelectContent>
@@ -247,7 +247,7 @@ const AvatarFormContent = ({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Conversation Difficulty</Label>
+            <Label>Conversation Difficulty <span className="text-destructive">*</span></Label>
             <Select value={formData.conversationDifficulty} onValueChange={(value) => setFormData({ ...formData, conversationDifficulty: value })}>
               <SelectTrigger><SelectValue placeholder="Select difficulty" /></SelectTrigger>
               <SelectContent>
@@ -257,7 +257,7 @@ const AvatarFormContent = ({
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Knowledge Profile</Label>
+          <Label>Knowledge Profile <span className="text-destructive">*</span></Label>
           <Input
             placeholder="e.g., Enterprise Software Sales"
             value={formData.knowledgeProfile || ""}
@@ -265,7 +265,7 @@ const AvatarFormContent = ({
           />
         </div>
         <div className="space-y-2">
-          <Label>Allowed Topics</Label>
+          <Label>Allowed Topics <span className="text-destructive">*</span></Label>
           <Textarea
             placeholder="Topics the avatar can discuss"
             value={formData.allowedTopics || ""}
@@ -273,7 +273,7 @@ const AvatarFormContent = ({
           />
         </div>
         <div className="space-y-2">
-          <Label>Response Length</Label>
+          <Label>Response Length <span className="text-destructive">*</span></Label>
           <Select value={formData.responseLength} onValueChange={(value) => setFormData({ ...formData, responseLength: value })}>
             <SelectTrigger><SelectValue placeholder="Select response length" /></SelectTrigger>
             <SelectContent>
@@ -350,7 +350,7 @@ const Avatars = () => {
 
   const loadMetaData = async () => {
     try {
-      const response = fetchMetaData();
+      const response = await fetchMetaData();
       console.log(' response--', response)
       if (response) {
 
@@ -364,7 +364,7 @@ const Avatars = () => {
   const loadAvatars = async () => {
     try {
        fetchOrganizations()
-        .then((orgs) => setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
+        .then((orgs) =>  setOrganizations(Array.isArray(orgs) ? orgs : getLoginUserOrganization()))
         .catch(() => setOrganizations(getLoginUserOrganization()));
       const apiData = await fetchAvatars();
 
@@ -401,10 +401,10 @@ const Avatars = () => {
 
   useEffect(() => {
 
-
+    loadAvatars();
     loadMetaData();
     loadAvatarConfigurationsData();
-    loadAvatars();
+    
   }, []);
 
   // if (loading) return <p>Loading avatars...</p>;
@@ -440,8 +440,29 @@ const Avatars = () => {
 
 
   const handleCreateAvatar = async () => {
-    if (!formData.name || !formData.organization || !formData.selectedAvatarIds) {
-      toast.error("Please fill in required fields and select an avatar");
+    if (!formData.name?.trim() || 
+        !formData.description?.trim() ||
+        !formData.persona?.trim() ||
+        !formData.role?.trim() || 
+        !formData.background || 
+        !formData.personality?.trim() ||
+        !formData.strictness || 
+        !formData.knowledgeProfile?.trim() ||
+        !formData.conversationDifficulty ||
+        !formData.allowedTopics?.trim() || 
+        !formData.responseLength ||
+        
+
+        !formData.organization ) {
+          if(formData.selectedAvatarIds.length === 0) {
+            toast.error("Please fill in required fields and select one avatar");
+          } else {
+            toast.error("Please fill in required fields");
+          }
+      
+      return;
+    } else if (formData.selectedAvatarIds.length === 0) {
+      toast.error("Please select one avatar ");
       return;
     }
 
@@ -484,6 +505,31 @@ const Avatars = () => {
 
   const handleEditAvatar = async () => {
     console.log('selectedAvatar', selectedAvatar)
+     if (!formData.name?.trim() || 
+        !formData.description?.trim() ||
+        !formData.persona?.trim() ||
+        !formData.role?.trim() || 
+        !formData.background || 
+        !formData.personality?.trim() ||
+        !formData.strictness || 
+        !formData.knowledgeProfile?.trim() ||
+        !formData.conversationDifficulty ||
+        !formData.allowedTopics?.trim() || 
+        !formData.responseLength ||
+        
+
+        !formData.organization ) {
+       if(formData.selectedAvatarIds.length === 0) {
+            toast.error("Please fill in required fields and select one avatar");
+          } else {
+            toast.error("Please fill in required fields");
+          }
+      return;
+    } else if (formData.selectedAvatarIds.length === 0) {
+      toast.error("Please select one avatar ");
+      return;
+    }
+
     if (!selectedAvatar) return;
 
     try {
